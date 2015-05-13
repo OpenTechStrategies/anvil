@@ -1,0 +1,12 @@
+{
+    "OTS_root":"/media/mmc/OpenTechStrategies",
+    "Banks": {
+	"Chase Bank" :	{
+	    "accounts": {
+		"Preferred Business Checking": {
+		    "statements_dir":"/finances/statements"
+		}
+	    }
+	}
+    }
+}
