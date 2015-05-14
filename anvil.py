@@ -21,19 +21,43 @@ import util as u
 def parse_args():
     import argparse
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
-                                     description="""A helper for ledger.\n\ncommands:
-  audit                 run all available tests on the ledger file
-  monthly-bal           check ending balances of monthly statements against ledger""")
-    parser.add_argument('command', type=str, nargs='?', default='audit',
+    dispatch = Dispatch()
+    help_str = {}
+    description = ""
+    for cmd in dispatch._valid_commands(fix_underscores=False):
+        lines = inspect.getdoc(getattr(dispatch, cmd)).split("\n")
+        help_str[cmd.replace('_','-')] = "\n".join(lines).strip()
+        lines[0] = lines[0][0].lower() + lines[0][1:]
+        description += "  {0:<20}  {1}\n".format(cmd, lines[0])
+
+    # Specify parameters for the command line interface
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, add_help=False, description=description)
+    parser.add_argument('command', type=str, nargs='?',
                         help='a command for anvil to run')
     parser.add_argument('args', type=str, nargs='*', default=[],
                         help='arguments to the command')
     parser.add_argument('-f', '--file', nargs='?', type=str,
                         default=None,
                         help='the ledger file to parse')
+    parser.add_argument('-h', '--help', action='store_true', dest='help',
+                        help='display this help message and exit')
 
+    # Run the argument parser
     args = vars(parser.parse_args())
+
+    # Detailed help for `anvil.py -h foo`
+    if args['help']:
+        if not args['command']:
+            parser.print_help()
+            sys.exit()
+            return
+        if not args['command'] in dispatch._valid_commands():
+            sys.stderr.write("Unknown command: %s\n" % args['command'])
+        else:
+            print "%s: %s" % (args['command'].upper(), help_str[args['command']])
+        sys.exit()
+
+    if not args.command: args.command = 'audit'
 
     # Handle file argument
     if args['file']:
@@ -41,7 +65,7 @@ def parse_args():
     del args['file'] # ensure later funcs don't rely on the wrong source of the file name
 
     # Munge and validate command
-    valid_commands = Dispatch()._valid_commands()
+    valid_commands = dispatch._valid_commands()
     if not args['command'] in valid_commands:
         parser.print_help()
         print "\nUnknown command (%s).  Please try one of these: %s" % (args['command'], " ".join(valid_commands))
@@ -61,17 +85,24 @@ class Dispatch():
     you need and set the right class parameters. This might help with
     separating interface and implementation.
 
+    Method comments are magic too. Line one gets automatically snarfed
+    into the help description for the command. The whole message gets
+    displayed if the user requests detailed help on the command.
+
     It would be neat if parse_args pulled the valid commands from here
-    not just for the valid_commands list but also for the description
-    var or even parser.add_arguments.
+    not just for the valid_commands list but also for
+    parser.add_arguments.
 
     TODO: don't include methods that start with _ in parse.arg's valid_commands
+
     """
 
     banks = None
 
-    def _valid_commands(self):
-        return [m[0].replace('_','-') for m in inspect.getmembers(self, predicate=inspect.ismethod) if not m[0].startswith("_")]
+    def _valid_commands(self, fix_underscores=True):
+        cmds = [m[0] for m in inspect.getmembers(self, predicate=inspect.ismethod) if not m[0].startswith("_")]
+        if fix_underscores: return [c.replace('_','-') for c in cmds]
+        return cmds
 
     def _load_banks(self):
         if not self.banks:
@@ -88,13 +119,12 @@ class Dispatch():
             self.monthly_bal(accounts = bank)
 
     def monthly_bal(self, **kwargs):
-        """We take a list of accounts and pull monthly balances from their
-        statements.
+        "check ending balances of statements against the ledger."
 
-        kwargs['accounts'] is a bank object (or just a list of accounts)
+        """kwargs['accounts'] is a bank object (or just a list of
+        accounts, I guess)
+
         """
-
-        self._load_banks()
 
         # If a set of accounts hasn't been provided, load them here.
         if not kwargs.setdefault('accounts', None):
@@ -108,9 +138,15 @@ class Dispatch():
         for name, account in kwargs['accounts'].items():
             accountant.monthly_bal(account, cl_display.monthly_bal)
 
+    def reconcile(self, **kwargs):
+        """Match transactions in the ledger and bank statements."""
+        pass
+
     def nop(self, **kwargs):
-        """This is here so we can test just the stuff up to
-        dispatch. Execution will hit this and return to main.
+        """Do nothing. Used for tests. Limits execution to main.
+
+        We need a way to test main, and this command helps us do
+        that. You can safely ignore it. I mostly do.
 
         """
         pass
