@@ -6,9 +6,9 @@ import dateutil, os, subprocess, sys
 from decimal import Decimal, ROUND_HALF_UP
 import xml.etree.ElementTree as ET
 
-from fabfile import MAIN_LEDGER
 from transactions import ParseError, Transaction, Transactions, Posting
 import util as u
+from config import config as c
 
 def strip(a,b,c):
     return ''.join(c).strip()
@@ -17,8 +17,9 @@ def strip(a,b,c):
 class Ledger(Transactions):
     search = ''
 
-    def __init__(self, fname=MAIN_LEDGER, search="", opts=""):
+    def __init__(self, fname=None, search="", opts=""):
         Transactions.__init__(self)
+        if not fname: fname = c['ledger-file']
         self.search = search
         self.opts = opts
         self.fname = fname
@@ -41,7 +42,7 @@ class Ledger(Transactions):
                 pass
             self.preamble += line + "\n"
 
-        for line in reversed(lines):
+        for line in reversed(lines): 
             try:
                 if dateutil.parser.parse(line.split(" ",1)[0]) != now:
                     break
@@ -188,8 +189,9 @@ class Ledger(Transactions):
 
 class Balance(dict):
     """Run a balance command and represent the results."""
-    def __init__(self, search="", opts="", fname=MAIN_LEDGER):
+    def __init__(self, search="", opts="", fname=None):
         dict.__init__(self)
+        if not fname: fname = c['ledger-file']
         self.search = search
         self.opts = opts
         self.fname = fname
@@ -208,6 +210,7 @@ class Balance(dict):
             self.parse_line(col, line_no+1, account)
 
     def run(self):
+        "Run the balance command from ledger and grab the results"
         lines = subprocess.check_output("ledger -f " + self.fname + " " + self.opts + " balance " + self.search, shell=True).split("\n")
         depth = 0
         col = len(lines[0].split("Assets")[0])
