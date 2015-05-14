@@ -11,8 +11,8 @@ __license__ = "AGPLv3+"
 
 import inspect, os, sys
 
-from chase import Chase
 from config import c
+from chase import Chase
 from errs import ConfigError
 import util as u
 
@@ -52,6 +52,12 @@ class Dispatch():
     a valid command and dispatch to the method is automatic from main.
     """
     def audit(self, **kwargs):
+        """Look for problems in the ledger file."""
+
+        chase = Chase()
+        chase.load_accounts()
+        print c
+        sys.exit()
         print "audit"
         print kwargs
     def monthly_bal(self, **kwargs):
