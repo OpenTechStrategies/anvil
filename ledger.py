@@ -198,19 +198,9 @@ class Balance(dict):
         self.account = {}
         self.run()
 
-    def parse_line(self, col, line_no, parent_name=""):
-        line = self.bal_lines[line_no]
-        if not col:
-            col = len(line.split("Assets")[0])
-        if parent_name:
-            parent_name += ":"
-        account = parent_name + line[col:]
-        print account
-        if line_no < len(self.bal_lines):
-            self.parse_line(col, line_no+1, account)
-
     def run(self):
-        "Run the balance command from ledger and grab the results"
+        """Run the balance command from ledger and grab the results
+        """
         cmd_line = "ledger -f " + self.fname + " " + self.opts + " balance " + self.search
         self.bal_lines = subprocess.check_output(cmd_line, shell=True).split("\n")
 
@@ -219,6 +209,6 @@ class Balance(dict):
             return
 
         for line in self.bal_lines:
-            if "Assets:Checking" in line:
-                line = line.split("Assets:Checking",1)[0].strip()
+            if self.search in line:
+                line = line.split(self.search,1)[0].strip()
                 self.balance = Decimal( line.replace(",","").replace("$","") )
