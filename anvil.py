@@ -15,7 +15,7 @@ from config import config as c
 from banks import Banks
 from errs import ConfigError
 from accountant import Accountant, Bank_Accountant, Stacy
-import cl_display # command line display classes
+import display_cl # command line display classes
 import util as u
 
 def parse_args():
@@ -136,7 +136,7 @@ class Dispatch():
         # do the monthly balance thing for all the accounts
         accountant = Stacy()
         for name, account in kwargs['accounts'].items():
-            accountant.monthly_bal(account, cl_display.monthly_bal)
+            accountant.monthly_bal(account, display_cl.monthly_bal)
 
     def reconcile(self, **kwargs):
         """Match transactions in the ledger and bank statements."""
