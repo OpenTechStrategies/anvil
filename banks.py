@@ -1,5 +1,5 @@
 import sys
-from config import c
+from config import config as c
 from errs import ConfigError
 from chase import Chase
 
