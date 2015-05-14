@@ -5,7 +5,7 @@
 	"Chase Bank" :	{
 	    "accounts": {
 		"Preferred Business Checking": {
-		    "statements_dir":"/finances/statements"
+		    "statements-dir":"/finances/statements"
 		}
 	    }
 	}
