@@ -16,6 +16,7 @@ from banks import Banks
 from errs import ConfigError
 from accountant import Accountant, Bank_Accountant, Stacy
 import display_cl # command line display classes
+import display_csv
 import util as u
 
 def parse_args():
@@ -24,9 +25,9 @@ def parse_args():
     dispatch = Dispatch()
     help_str = {}
     description = ""
-    for cmd in dispatch._valid_commands(fix_underscores=False):
-        lines = inspect.getdoc(getattr(dispatch, cmd)).split("\n")
-        help_str[cmd.replace('_','-')] = "\n".join(lines).strip()
+    for cmd in dispatch._valid_commands():
+        lines = inspect.getdoc(getattr(dispatch, cmd.replace('-','_'))).split("\n")
+        help_str[cmd] = "\n".join(lines).strip()
         lines[0] = lines[0][0].lower() + lines[0][1:]
         description += "  {0:<20}  {1}\n".format(cmd, lines[0])
 
@@ -39,8 +40,8 @@ def parse_args():
     parser.add_argument('-f', '--file', nargs='?', type=str,
                         default=None,
                         help='the ledger file to parse')
-    parser.add_argument('-h', '--help', action='store_true', dest='help',
-                        help='display this help message and exit')
+    parser.add_argument('--csv', type=str, help='output in csv format. Default is stdout')
+    parser.add_argument('-h', '--help', action='store_true', help='display this help message. Specify a command for detailed help on that command.')
 
     # Run the argument parser
     args = vars(parser.parse_args())
@@ -57,7 +58,7 @@ def parse_args():
             print "%s: %s" % (args['command'].upper(), help_str[args['command']])
         sys.exit()
 
-    if not args.command: args.command = 'audit'
+    if not args['command']: args['command'] = 'audit'
 
     # Handle file argument
     if args['file']:
@@ -98,6 +99,10 @@ class Dispatch():
     """
 
     banks = None
+    def __init__(self, kwargs={}):
+        self.display = display_cl # cli is the default display
+        if kwargs.setdefault('csv', None):
+            self.display = display_csv # but the user can choose csv
 
     def _valid_commands(self, fix_underscores=True):
         cmds = [m[0] for m in inspect.getmembers(self, predicate=inspect.ismethod) if not m[0].startswith("_")]
@@ -136,7 +141,7 @@ class Dispatch():
         # do the monthly balance thing for all the accounts
         accountant = Stacy()
         for name, account in kwargs['accounts'].items():
-            accountant.monthly_bal(account, display_cl.monthly_bal)
+            accountant.monthly_bal(account, self.display.monthly_bal)
 
     def reconcile(self, **kwargs):
         """Match transactions in the ledger and bank statements."""
@@ -156,7 +161,7 @@ def dispatch(command, args):
     `command`. Pass args as kwargs in the call.
 
     """
-    getattr(Dispatch(), args['command'])(**args)
+    getattr(Dispatch(args), args['command'])(**args)
 
 def fix_paths():
     """Change all the paths in config.json to abs paths because we don't
