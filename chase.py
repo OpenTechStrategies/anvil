@@ -19,9 +19,10 @@ class Statement(dict):
     """
     amount_pat = re.compile("\$? ?-? ?[.,\d]+$")
 
-    def __init__(self, fname):
+    def __init__(self, fname, ledger_account):
         dict.__init__(self)
         self.fname = fname
+        self.ledger_account = ledger_account
         self.fname_text = os.path.splitext(fname)[0]+".txt"
         if os.path.exists(self.fname_text):
             self.load_from_text()
@@ -138,7 +139,7 @@ class Statement(dict):
                                 })
                 tx['postings'] = [Posting(**{'commodity':'$',
                                              'amount':amt,
-                                             'account_name':'Assets:Checking:'+field,
+                                             'account_name':self.ledger_account + ':' +field,
                                              'tx':tx}),
                                   Posting(**{'commodity':'$',
                                              'amount':amt*-1,
@@ -172,7 +173,7 @@ class Statement(dict):
                                            'tx':tx,
                                        }),
                                 Posting(**{'commodity':da_parts[1] if da_parts[1] else "$",
-                                           'account_name':'Assets:Checking:'+field,
+                                           'account_name':self.ledger_account + ':' +field,
                                            'amount':amt * -1,
                                            'tx':tx,
                                        }),
@@ -246,7 +247,7 @@ class Statement(dict):
         for field in self.section_names:
             field = field.lower()
             if field in self:                
-                s = self[field].sum("Assets:Checking")
+                s = self[field].sum(self.ledger_account)
                 if not field in self['summary']:
                     raise ParseError("Statement %s has a section that isn't in the summary: %s" % (self.fname, field))
                 if s != self['summary'][field]:
@@ -284,6 +285,7 @@ class Account(Transactions):
         self.statements_dir = kwargs['statements-dir']
         self.bank_name = kwargs['bank-name']
         self.name = kwargs['name']
+        self.ledger_account = kwargs['ledger-account']
         self.account_num = None
         self.config = c['banks'][self.bank_name]['accounts'][self.name]
         Transactions.__init__(self)
@@ -308,7 +310,7 @@ class Account(Transactions):
         """Pull all transactions from the PDF statements, sort them by date.
         """
         for fname in sorted(glob.glob(os.path.join(self.statements_dir, "20??_??.pdf"))):
-            statement = Statement(fname)
+            statement = Statement(fname, self.ledger_account)
             statement.parse()
             self.extend(statement.get_txs())
             self.statements.append(statement)
@@ -322,7 +324,6 @@ class Chase(dict):
         dict.__init__(self)
         for key, val in kwargs.items():
             setattr(self, key, val)
-
     def load_accounts(self):
         for account_name, account in c['banks'][self.name]['accounts'].items():
             account['name'] = account_name

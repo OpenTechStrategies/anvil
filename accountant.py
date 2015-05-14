@@ -26,7 +26,7 @@ class Account_Accountant():
         first_continuous = None
         last = 0
         for month in account.statements:
-            bal = Balance(search="Assets:Checking", opts="--effective -e " + month.get_date(month['end_date'] + dateutil.relativedelta.relativedelta(days=1)))
+            bal = Balance(search=account.ledger_account, opts="--effective -e " + month.get_date(month['end_date'] + dateutil.relativedelta.relativedelta(days=1)))
             if bal.balance != month['summary']['ending balance']:
                 if not first_continuous: 
                     last = 0
