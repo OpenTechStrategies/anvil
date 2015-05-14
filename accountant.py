@@ -15,27 +15,30 @@ should dump it. James isn't the one to eval that, though because it
 will work for him long after it stops working for others.
 
 """
-import sys
-from Ledger import Balance
+import dateutil, sys
+from ledger import Balance
 class Account_Accountant():
     """Stacy is our bookkeeper. She can answer questions about an
     individual account.
 
     """
     def monthly_bal(self, account, display):
-        errs = []
+        first_continuous = None
+        last = 0
         for month in account.statements:
-            print account
-            sys.exit()
-
             bal = Balance(search="Assets:Checking", opts="--effective -e " + month.get_date(month['end_date'] + dateutil.relativedelta.relativedelta(days=1)))
             if bal.balance != month['summary']['ending balance']:
-                errs.append("As of %s: Statement balance of %s != Ledger balance of %s. Off by %s." % (month.get_date(), month['summary']['ending balance'], bal.balance, month['summary']['ending balance'] - bal.balance))
+                if not first_continuous: 
+                    last = 0
+                display.add(month.get_date(), month['summary']['ending balance'], bal.balance, last)
+                if not first_continuous: 
+                    first_continuous = month.get_date()
+                last = month['summary']['ending balance'] - bal.balance
             else:
                 # unbalanced months followed by balanced months are
                 # month-boundary dating errors
-                errs = []
-        print "\n".join(errs)
+                first_continuous = None #month.get_date()
+        display.done(first_continuous)
 Stacy = Account_Accountant
     
 
@@ -45,7 +48,8 @@ class Bank_Accountant():
     accounts at a specific bank.
 
     """
-    pass
+    def monthly_bal(self):
+        pass
 
 class Accountant():
     """Our accountant is the person who actually tries to figure out
