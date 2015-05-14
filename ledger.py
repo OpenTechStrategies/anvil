@@ -211,16 +211,14 @@ class Balance(dict):
 
     def run(self):
         "Run the balance command from ledger and grab the results"
-        lines = subprocess.check_output("ledger -f " + self.fname + " " + self.opts + " balance " + self.search, shell=True).split("\n")
-        depth = 0
-        col = len(lines[0].split("Assets")[0])
-        
-        for line in lines:
-            account = line[col:]
-            depth = (len(account) - len(account.lstrip()))/2
-            if account == "": break
-            #print account, depth
+        cmd_line = "ledger -f " + self.fname + " " + self.opts + " balance " + self.search
+        self.bal_lines = subprocess.check_output(cmd_line, shell=True).split("\n")
 
-        self.balance = Decimal( lines[-2].replace(",","").replace("$","") )
-        self.bal_lines = lines
-            
+        if self.bal_lines == ['']:
+            self.balance = 0
+            return
+
+        for line in self.bal_lines:
+            if "Assets:Checking" in line:
+                line = line.split("Assets:Checking",1)[0].strip()
+                self.balance = Decimal( line.replace(",","").replace("$","") )
