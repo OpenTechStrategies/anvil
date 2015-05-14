@@ -1,3 +1,6 @@
 \#*
 .#*
 *.pyc
+
+# I have some node_modules from another branch hanging out here. Ignore.
+node_modules/*
