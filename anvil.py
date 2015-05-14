@@ -14,6 +14,7 @@ import inspect, os, sys
 from chase import Chase
 from config import c
 from errs import ConfigError
+import util as u
 
 def parse_args():
     import argparse
@@ -46,16 +47,6 @@ def parse_args():
         sys.exit()
     return args
 
-def find_ledger_file():
-    """Try to find the ledger file, either here, in the root filesystem, or under the ots root."""
-    if not os.path.exists(c['ledger-file']):
-        if c['ledger-file'][0] == '/':
-            c['ledger-file'] = c['ledger-file'][1:]
-        c['ledger-file'] = os.path.join(c['OTS-root'], c['ledger-file'])
-        if not os.path.exists(c['ledger-file']):
-            raise ConfigError, "Ledger file doesn't exist: %s" % c['ledger-file']
-    return c['ledger-file']
-
 class Dispatch():
     """This class is a little bit magic. Any method defined here becomes
     a valid command and dispatch to the method is automatic from main.
@@ -74,7 +65,7 @@ def dispatch(command, args):
 
 def main():
     args = parse_args()
-    find_ledger_file()
+    c['ledger-file'] = u.fix_path(c['ledger-file'], c['OTS-root'])
     dispatch(args['command'], args)
 
 if __name__ == "__main__":

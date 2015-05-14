@@ -1,4 +1,20 @@
+"""These are utility functions of potentially more general use than
+just this project.
+"""
+import os
 from decimal import Decimal
+
+def fix_path(path, head='/'):
+    """Given a path that might be local, relative to root or relative to
+    some head directory, try to find it in the filesystem.
+    """
+    if not os.path.exists(path):
+        if path[0] == '/':
+            path = path[1:]
+        path = os.path.join(head, path)
+        if not os.path.exists(path):
+            raise IOError(2, "File %s not found." % path)
+    return path
 
 def shellquote(s):
     return "'" + s.replace("'", "'\\''") + "'"
