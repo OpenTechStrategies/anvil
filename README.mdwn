@@ -1,3 +1,10 @@
+# Anvil
+
+This is a set of tools for supporting use of the ledger accounting
+package. The tools are aimed at making it easier to catch and fix
+mistakes and omissions. We'd like to make it easier and faster to
+reconcile checking accounts and the ledger.
+
 # Downloading statements
 
 For this, we're using the PDFs, not the CSV.
