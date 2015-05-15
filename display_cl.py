@@ -2,13 +2,9 @@
 
 import sys
 from namespace import Namespace
-from display import Display
+import display
 
-class Monthly_Bal(Display):
-    months = []
-    def add(self, end_date, statement_bal, ledger_bal, last_month):
-        self.months.append(Namespace({'end_date':end_date, 'statement_bal':statement_bal, 'ledger_bal':ledger_bal, 'last_month':last_month}))
-
+class Monthly_Bal(display.Monthly_Bal):
     def done(self, first_continuous):
         """This method is called when all the statement periods have been
         compared to the ledger. On the command line, we can now
@@ -30,8 +26,9 @@ class Monthly_Bal(Display):
         such?
 
         """
+        out = ""
+        padding=2
         widths = [0,0,0,0,0]
-        padding = 2
         cols = ["As of", "Statement Bal", "Ledger Bal", "Monthly Delta", "Cumu Delta"]
         first = False
         last = 0
@@ -52,8 +49,8 @@ class Monthly_Bal(Display):
             heading = cols[idx]
             width = widths[idx]
             fmtstr = "|{0:^%d}" % width
-            sys.stdout.write(fmtstr.format(heading))
-        print "|"
+            out += fmtstr.format(heading)
+        out += "|\n"
         first = False
         last = 0
         for m in self.months:
@@ -67,8 +64,11 @@ class Monthly_Bal(Display):
                 fmtstr += "{%d:>%d}|" % (idx, width)
             cumu = m.statement_bal - m.ledger_bal
             monthly = cumu - last
-            print(fmtstr.format(m.end_date, m.statement_bal, m.ledger_bal, monthly, cumu))
+            out += fmtstr.format(m.end_date, m.statement_bal, m.ledger_bal, monthly, cumu) + "\n"
             last = cumu
-            
-monthly_bal = Monthly_Bal()
+        if self.output_file == "-":
+            print out
+        else:
+            with open(self.output_file, 'w') as OUTF:
+                OUTF.write(out)
 

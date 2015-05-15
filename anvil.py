@@ -15,6 +15,7 @@ from config import config as c
 from banks import Banks
 from errs import ConfigError
 from accountant import Accountant, Bank_Accountant, Stacy
+import display
 import display_cl # command line display classes
 import display_csv
 import util as u
@@ -37,10 +38,9 @@ def parse_args():
                         help='a command for anvil to run')
     parser.add_argument('args', type=str, nargs='*', default=[],
                         help='arguments to the command')
-    parser.add_argument('-f', '--file', nargs='?', type=str,
-                        default=None,
-                        help='the ledger file to parse')
-    parser.add_argument('--csv', type=str, help='output in csv format. Default is stdout')
+    parser.add_argument('-f', '--file', type=str, default=None, help='the ledger file to parse')
+    parser.add_argument('-o', '--output', type=str, default=None, help='redirect output to a file (not implemented)')
+    parser.add_argument('--csv', action='store_true', default=False, help='output in csv format')
     parser.add_argument('-h', '--help', action='store_true', help='display this help message. Specify a command for detailed help on that command.')
 
     # Run the argument parser
@@ -100,9 +100,21 @@ class Dispatch():
 
     banks = None
     def __init__(self, kwargs={}):
+
+        # Handle setting of output file. Some displays (cli and csv)
+        # will respect this Here we're changing the display.Display
+        # class. Later, we'll instantiate another class that inherits
+        # from display.Display. Our change will be inherited too.
+        if kwargs.setdefault('output', None):
+            display.Display.output_file = kwargs['output']
+
+        # Pick our display module but don't instantiate our display
+        # class yet. We'll do that in the actual command methods
+        # below.
         self.display = display_cl # cli is the default display
         if kwargs.setdefault('csv', None):
             self.display = display_csv # but the user can choose csv
+
 
     def _valid_commands(self, fix_underscores=True):
         cmds = [m[0] for m in inspect.getmembers(self, predicate=inspect.ismethod) if not m[0].startswith("_")]
@@ -141,7 +153,7 @@ class Dispatch():
         # do the monthly balance thing for all the accounts
         accountant = Stacy()
         for name, account in kwargs['accounts'].items():
-            accountant.monthly_bal(account, self.display.monthly_bal)
+            accountant.monthly_bal(account, self.display.Monthly_Bal())
 
     def reconcile(self, **kwargs):
         """Match transactions in the ledger and bank statements."""
