@@ -172,7 +172,7 @@ def dispatch(command, args):
     `command`. Pass args as kwargs in the call.
 
     """
-    getattr(Dispatch(args), args['command'])(**args)
+    getattr(Dispatch(args), command)(**args)
 
 def fix_paths():
     """Change all the paths in config.json to abs paths because we don't
