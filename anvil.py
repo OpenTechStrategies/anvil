@@ -3,7 +3,7 @@
 anvil --help for options
 
 Copyright 2015 James Vasile 
-Licensed to you under the terms of the Affero GNU General Public License, version 3 or later.
+Available under the terms of the Affero GNU General Public License, version 3 or later.
 """
 __author__ = "James Vasile <james@jamesvasile.com>"
 __version__ = "0.2.1"
@@ -84,31 +84,7 @@ def parse_args():
     return args
 
 class Dispatch(dispatch.Dispatch):
-    """This class is a little bit magic. Any method defined here becomes a
-    valid command and dispatch to the method is automatic from
-    main. Likewise, if it's not defined here, our command line parser
-    will reject it as a command.
-
-    For each method, we get the command line args in kwargs. Let's
-    make a rule that we do not pass those args through wholesale. No
-    passing all the kwargs to our implementation classes. Take what
-    you need and set the right class parameters. This might help with
-    separating interface and implementation.
-
-    Method comments are magic too. Line one gets automatically snarfed
-    into the help description for the command. The whole message gets
-    displayed if the user requests detailed help on the command.
-
-    It would be neat if parse_args pulled the valid commands from here
-    not just for the valid_commands list but also for
-    parser.add_arguments.
-
-    Add a command to _undocumented to indicate that it should be
-    somewhat hidden from the user. In this case, that means it doesn't
-    show up in the standard --help text. But `-h foo` will still be
-    there if the user wants to see that.
-
-    """
+    """See dispatch.Dispatch for method documentation."""
     _undocumented=["nop"]
     banks = None
     def __init__(self, kwargs={}):

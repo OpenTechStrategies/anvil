@@ -11,9 +11,13 @@ class Dispatch(object):
     you need and set the right class parameters. This might help with
     separating interface and implementation.
 
-    Method comments are magic too. Line one gets automatically snarfed
+    Method doc strings are magic too. Line one gets automatically snarfed
     into the help description for the command. The whole message gets
     displayed if the user requests detailed help on the command.
+
+    Also this doc string stuff means that you'll want to put the
+    user-facing documentation in the first doc string and the dev
+    documentation in a separate doc string immediately after the first.
 
     It would be neat if parse_args pulled the valid commands from here
     not just for the valid_commands list but also for
@@ -27,18 +31,18 @@ class Dispatch(object):
     word separation.
 
     _help(command) returns the documentation for the specified
-    command. Basically, it grabs the doc string (the first comment) from
-    the method so we can display it to the user.
+    command. Basically, it grabs the doc string from the method so we
+    can display it to the user.
 
     _describe(command, lower) returns the short documentation for the
     specified command. Basically, it grabs the first line from the
-    documentation, lowercases the first char if lower is true (the
+    doc string, lowercases the first char if lower is true (the
     default), and returns it for display to the user.
 
     Add a command to _undocumented to indicate that it should be
     somewhat hidden from the user.
 
-    """
+"""
     _undocumented = []
 
     def _valid_commands(self, fix_underscores=True):
