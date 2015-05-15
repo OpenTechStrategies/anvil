@@ -15,9 +15,7 @@ from config import config as c
 from banks import Banks
 from errs import ConfigError
 from accountant import Accountant, Bank_Accountant, Stacy
-import display
-import display_cl # command line display classes
-import display_csv
+import display, display_cl, display_csv
 import util as u
 
 def parse_args():
