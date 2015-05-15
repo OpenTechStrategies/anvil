@@ -72,6 +72,15 @@ def parse_args():
         print "\nUnknown command (%s).  Please try one of these: %s" % (args['command'], " ".join(valid_commands))
         sys.exit()
     args['command'] = args['command'].replace('-','_')
+
+    # Handle setting of output file. Some displays (cli and csv)
+    # will respect this Here we're changing the display.Display
+    # class. Later, we'll instantiate another class that inherits
+    # from display.Display. Our change will be inherited too.
+    if args.setdefault('output', None):
+        display.Display.output_file = args['output']
+
+
     return args
 
 class Dispatch():
@@ -100,13 +109,6 @@ class Dispatch():
 
     banks = None
     def __init__(self, kwargs={}):
-
-        # Handle setting of output file. Some displays (cli and csv)
-        # will respect this Here we're changing the display.Display
-        # class. Later, we'll instantiate another class that inherits
-        # from display.Display. Our change will be inherited too.
-        if kwargs.setdefault('output', None):
-            display.Display.output_file = kwargs['output']
 
         # Pick our display module but don't instantiate our display
         # class yet. We'll do that in the actual command methods
