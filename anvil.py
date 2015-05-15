@@ -102,9 +102,6 @@ class Dispatch():
     It would be neat if parse_args pulled the valid commands from here
     not just for the valid_commands list but also for
     parser.add_arguments.
-
-    TODO: don't include methods that start with _ in parse.arg's valid_commands
-
     """
 
     banks = None
