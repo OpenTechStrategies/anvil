@@ -31,10 +31,8 @@ def parse_args():
 
     # Specify parameters for the command line interface
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, add_help=False, description=description)
-    parser.add_argument('command', type=str, nargs='?',
-                        help='a command for anvil to run')
-    parser.add_argument('args', type=str, nargs='*', default=[],
-                        help='arguments to the command')
+    parser.add_argument('command', type=str, nargs='?', help='a command for anvil to run')
+    parser.add_argument('args', type=str, nargs='*', default=[], help='arguments to the command')
     parser.add_argument('-f', '--file', type=str, default=None, help='the ledger file to parse')
     parser.add_argument('-o', '--output', type=str, default=None, help='redirect output to a file (not implemented)')
     parser.add_argument('--csv', action='store_true', default=False, help='output in csv format')
@@ -55,6 +53,9 @@ def parse_args():
             print "%s: %s" % (args['command'].upper(), help_str[args['command']])
         sys.exit()
 
+    # If we specify this as the default in the parser.add_argument
+    # line above, the detailed help breaks because it relies on
+    # command being blank sometimes.
     if not args['command']: args['command'] = 'audit'
 
     # Handle file argument
@@ -70,10 +71,10 @@ def parse_args():
         sys.exit()
     args['command'] = args['command'].replace('-','_')
 
-    # Handle setting of output file. Some displays (cli and csv)
-    # will respect this Here we're changing the display.Display
-    # class. Later, we'll instantiate another class that inherits
-    # from display.Display. Our change will be inherited too.
+    # Handle setting of output file. Some displays (cli and csv) will
+    # respect this.  Here we're changing the display.Display class.
+    # Later, we'll instantiate another class that inherits from
+    # display.Display.  Our change will be inherited too.
     if args.setdefault('output', None):
         display.Display.output_file = args['output']
 
@@ -196,9 +197,8 @@ def fix_paths():
             account['statements-dir'] = u.fix_path(account['statements-dir'], c['OTS-root'])
 
 def main():
-    args = parse_args()
     fix_paths()
-    dispatch(args['command'], args)
+    dispatch(args['command'], parse_args())
 
 if __name__ == "__main__":
     main()
