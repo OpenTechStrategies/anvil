@@ -9,12 +9,13 @@ __author__ = "James Vasile <james@jamesvasile.com>"
 __version__ = "0.2.1"
 __license__ = "AGPLv3+"
 
-import inspect, os, sys
+import os, sys
 
 from config import config as c
 from banks import Banks
 from errs import ConfigError
 from accountant import Accountant, Bank_Accountant, Stacy
+import dispatch
 import display, display_cl, display_csv
 import util as u
 
@@ -27,6 +28,7 @@ def parse_args():
     description = ""
     for cmd in dispatch._valid_commands():
         help_str[cmd] = dispatch._help(cmd)
+        if cmd in dispatch._undocumented: continue
         description += dispatch._describe(cmd)
 
     # Specify parameters for the command line interface
@@ -81,7 +83,7 @@ def parse_args():
 
     return args
 
-class Dispatch():
+class Dispatch(dispatch.Dispatch):
     """This class is a little bit magic. Any method defined here becomes a
     valid command and dispatch to the method is automatic from
     main. Likewise, if it's not defined here, our command line parser
@@ -100,8 +102,14 @@ class Dispatch():
     It would be neat if parse_args pulled the valid commands from here
     not just for the valid_commands list but also for
     parser.add_arguments.
-    """
 
+    Add a command to _undocumented to indicate that it should be
+    somewhat hidden from the user. In this case, that means it doesn't
+    show up in the standard --help text. But `-h foo` will still be
+    there if the user wants to see that.
+
+    """
+    _undocumented=["nop"]
     banks = None
     def __init__(self, kwargs={}):
 
@@ -111,25 +119,6 @@ class Dispatch():
         self.display = display_cl # cli is the default display
         if kwargs.setdefault('csv', None):
             self.display = display_csv # but the user can choose csv
-
-    def _valid_commands(self, fix_underscores=True):
-        cmds = [m[0] for m in inspect.getmembers(self, predicate=inspect.ismethod) if not m[0].startswith("_")]
-        if fix_underscores: return [c.replace('_','-') for c in cmds]
-        return cmds
-
-    def _help(self, cmd):
-        "Returns the documentation for the specified method."
-        if '-' in cmd:
-            cmd = cmd.replace('-','_')
-        lines = inspect.getdoc(getattr(self, cmd)).split("\n")
-        return "\n".join(lines).strip()
-
-    def _describe(self, cmd):
-        if '-' in cmd:
-            cmd = cmd.replace('-','_')
-        lines = inspect.getdoc(getattr(self, cmd)).split("\n")
-        lines[0] = lines[0][0].lower() + lines[0][1:]
-        return "  {0:<20}  {1}\n".format(cmd, lines[0])
 
     def _load_banks(self):
         if not self.banks:
