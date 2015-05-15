@@ -146,7 +146,50 @@ class Dispatch(dispatch.Dispatch):
 
     def reconcile(self, **kwargs):
         """Match transactions in the ledger and bank statements."""
-        pass
+        return
+        if not chase:
+            print "Loading bank statements."
+            chase = Chase()
+            chase.load_from_statements()
+        print "Loading ledger."
+        ledger = Ledger(search="Assets:Checking", opts = "--related-all") # fname="test/main.ledger", 
+        ledger.load()
+        print "Matching up the ledger and the statements."
+    
+        TXS = { 'ledger':ledger, 'bank':chase }
+        PAC = { # Postings to Accounts:Checking
+            'ledger':[],
+            'bank':[]
+        }
+
+        # This section does a few things:
+        #
+        #  * Make lists of the Accounts:Checking postings except for
+        #    transactions where the postings zero each other out.  
+        #
+        #  * Make amts dict that hashes amounts to postings.
+        amts = {}
+        for act in ['ledger','bank']:
+            for tx in TXS[act]:
+                tx.pac = [] # we'll save the postings so we don't have to collect each time
+                postings = [posting for posting in tx['postings'] if posting['account_name'].lower().startswith("assets:checking")]
+                if sum([posting['amount'] for posting in postings]) != 0:
+                    tx.pac.append(posting)
+                    for posting in postings:
+                        PAC[act].append(posting)
+                        if not posting['amount'] in amts:
+                            amts[posting['amount']] = []
+                        amts[posting['amount']].append( posting )
+    
+        # Identify each posting's candidate matche(s)
+        for act in ['ledger','bank']:
+            for tx in TXS[act]:
+                for posting in tx.pac:
+                    same_amount = [atx['tx']['tags']['id'] for atx in amts[posting['amount']] if atx['tx'] != tx]
+ 
+        #print PAC['ledger']
+        #print PAC['bank']
+
 
     def nop(self, **kwargs):
         """Do nothing. Used for tests. Limits execution to main.
