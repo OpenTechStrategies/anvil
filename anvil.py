@@ -187,7 +187,8 @@ def fix_paths():
 
 def main():
     fix_paths()
-    dispatch(args['command'], parse_args())
+    args = parse_args()
+    dispatch(args['command'], args)
 
 if __name__ == "__main__":
     main()
