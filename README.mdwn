@@ -1,0 +1,56 @@
+# Downloading statements
+
+For this, we're using the PDFs, not the CSV.
+
+ * Log in to Chase
+ * Click Deposit Accounts
+ * Click Perfbus Chk
+ * Click See Statements
+ * Choose statements for the dates you need
+ * Save As and store them using default file name
+
+Then, copy all the files to this dir and run `make`.
+
+# Dev Notes
+
+## Magic
+
+We do a few things with Python that are not standard, so it might be
+worth documenting them in case I'm less clever tomorrow, which seems
+pretty likely.
+
+### Dispatch
+
+Eveyr method in the Dispatch class (except for ones whose names starts
+with an underscore) is a command that can be given to Anvil. The
+argument parser uses the first comment in each method as documentation
+for the command. Line 0 is the short documentation. The entire first
+comment, including additional lines, is the detailed help one gets by
+calling `--help foo`.
+
+### Display Callbacks
+
+We separate the display (the "View" in MVC, I guess) from the
+implementation and the model by only talking to the user through
+display classes and our top-level python file, anvil.py. We pass these
+display classes as callbacks to the implementation (the "Controller"
+in MVC, I guess) classes. Mostly those classes are in accountant.py,
+chase.py, ledger.py.
+
+Our display classes are in modules and we can select the module at run
+time (via the --csv switch, for example). We can then instantiate a
+class within the module and the class will DTRT with regard to both
+logic and display.
+
+Some command line arguments affect the display. We cannot set those
+arguments in the instantiated display object because it doesn't exist
+until fairly late in the dispatch process. Waiting until those objects
+exist would be unwieldy. We'd have to set options in those objects in
+many places and in a repeated fashion. We can't just use module-level
+variables because what we really need is inheritance.
+
+To solve this, we change attributes of the python class
+(display.Display) from which the other display classes inherit.  Look
+at how the --output option is handled.  We change it in
+display.Display and then when display_csv.Monthly_Bal inherits from
+display.Display, the new value is carried over.
