@@ -23,14 +23,13 @@ import util as u
 def parse_args():
     import argparse
 
+    # Mine the Dispatch class for list of commands and documentations
     dispatch = Dispatch()
     help_str = {}
     description = ""
     for cmd in dispatch._valid_commands():
-        lines = inspect.getdoc(getattr(dispatch, cmd.replace('-','_'))).split("\n")
-        help_str[cmd] = "\n".join(lines).strip()
-        lines[0] = lines[0][0].lower() + lines[0][1:]
-        description += "  {0:<20}  {1}\n".format(cmd, lines[0])
+        help_str[cmd] = dispatch._help(cmd)
+        description += dispatch._describe(cmd)
 
     # Specify parameters for the command line interface
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, add_help=False, description=description)
@@ -114,11 +113,24 @@ class Dispatch():
         if kwargs.setdefault('csv', None):
             self.display = display_csv # but the user can choose csv
 
-
     def _valid_commands(self, fix_underscores=True):
         cmds = [m[0] for m in inspect.getmembers(self, predicate=inspect.ismethod) if not m[0].startswith("_")]
         if fix_underscores: return [c.replace('_','-') for c in cmds]
         return cmds
+
+    def _help(self, cmd):
+        "Returns the documentation for the specified method."
+        if '-' in cmd:
+            cmd = cmd.replace('-','_')
+        lines = inspect.getdoc(getattr(self, cmd)).split("\n")
+        return "\n".join(lines).strip()
+
+    def _describe(self, cmd):
+        if '-' in cmd:
+            cmd = cmd.replace('-','_')
+        lines = inspect.getdoc(getattr(self, cmd)).split("\n")
+        lines[0] = lines[0][0].lower() + lines[0][1:]
+        return "  {0:<20}  {1}\n".format(cmd, lines[0])
 
     def _load_banks(self):
         if not self.banks:
