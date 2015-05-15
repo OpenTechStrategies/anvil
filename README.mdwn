@@ -13,6 +13,35 @@ Then, copy all the files to this dir and run `make`.
 
 # Dev Notes
 
+## New Commands
+
+To add a new command:
+
+ * Stub out a method with the name of the command to the Dispatch class.
+
+ * Write the first comment to that class.  This comment will be
+   user-visible.  Line 0 is the short help description of the comment
+   that shows up in the standard '-h' view.  The comment as a whole
+   will be seen in the '-h foo' view.
+
+ * Add a class that can handle the comment to each display_foo module.
+
+ * Fill in the Dispatch method for this command. Have it call the
+   display module as needed to display the results. For anything that
+   produces a lot of output or takes a while, try to emit periodic
+   progress rather than saving all the output for the end.
+
+## Display
+
+We have display_cl, and display_csv. Those are both collections of
+command line display classes. For every new command, you probably want
+to write display classes for both cl and csv.
+
+At some point, we need to write display_web or something. I havent
+quite figured out what program flow for that will look like. I'm not
+sure how to use callbacks to respond to web requests and I need to
+look for frameworks that are callback-friendly.
+
 ## Magic
 
 We do a few things with Python that are not standard, so it might be
@@ -23,10 +52,11 @@ pretty likely.
 
 Eveyr method in the Dispatch class (except for ones whose names starts
 with an underscore) is a command that can be given to Anvil. The
-argument parser uses the first comment in each method as documentation
-for the command. Line 0 is the short documentation. The entire first
-comment, including additional lines, is the detailed help one gets by
-calling `--help foo`.
+argument parser uses object inspection to grab those command names. It
+also takes the first comment in each method as documentation for the
+command. Line 0 is the short documentation. The entire first comment,
+including additional lines, is the detailed help one gets by calling
+`--help foo`.
 
 ### Display Callbacks
 
