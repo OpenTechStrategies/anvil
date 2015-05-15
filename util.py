@@ -30,8 +30,9 @@ def slurp(filespec, split=True):
 def moneyfmt(value, places=2, curr='', sep=',', dp='.',
              pos='', neg='-', trailneg=''):
     """Grabbed this from
-    https://docs.python.org/2/library/decimal.html#recipes and unsure
-    of license status.  TODO: clarify license of this function.
+    https://docs.python.org/2/library/decimal.html#recipes and it
+    appears to be licensed under the Python Software Foundation
+    license (see https://docs.python.org/2/license.html)
 
     """
 
