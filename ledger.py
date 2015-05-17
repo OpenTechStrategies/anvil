@@ -16,6 +16,19 @@ log = logger.get_logger()
 def strip(a,b,c):
     return ''.join(c).strip()
 
+def call_ledger(cmd, fname="", stdin=""):
+    """This calls ledger and returns the result. If ledger writes to
+    stderr, we complain and raise ParseError
+
+    """
+    if not fname:
+        fname = "the ledger file"
+    proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (stdout, stderr) = proc.communicate(stdin)
+    if stderr and not stdout:
+        log.debug("Ledger error: {0}".format(stderr))
+        raise ParseError("Ledger could not parse {0}. Please correct the file.".format(fname))
+    return stdout            
 
 class Ledger(Transactions):
     search = ''
@@ -192,20 +205,6 @@ class Ledger(Transactions):
         for fname in files_to_load:
             xml = load_file(fname, files_to_load) # note: this appends to files_to_load
             self.parse_xml(xml, fname)
-
-def call_ledger(cmd, fname="", stdin=""):
-    """This calls ledger and returns the result. If ledger writes to
-    stderr, we complain and raise ParseError
-
-    """
-    if not fname:
-        fname = "the ledger file"
-    proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    (stdout, stderr) = proc.communicate(stdin)
-    if stderr and not stdout:
-        log.debug("Ledger error: {0}".format(stderr))
-        raise ParseError("Ledger could not parse {0}. Please correct the file.".format(fname))
-    return stdout            
 
 class Balance(dict):
     """Run a balance command and represent the results."""
