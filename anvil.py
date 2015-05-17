@@ -112,7 +112,7 @@ class Dispatch(dispatch.Dispatch):
             self.display = display_csv # but the user can choose csv
 
     def _load_banks(self):
-        print "Loading bank statements"
+        log.info( "Loading bank statements" )
         if not self.banks:
             self.banks = Banks()
             for bank_name, bank in c['banks'].items():
@@ -159,13 +159,13 @@ class Dispatch(dispatch.Dispatch):
         accountant = Stacy()
         for name, account in kwargs['accounts'].items():
             pass
-        print "Loading ledger."
+        log.info( "Loading ledger." )
         #print kwargs['accounts']['statements-dir']
-        print kwargs['accounts'].keys()
+        log.info( kwargs['accounts'].keys() )
         ledger = Ledger(search="Assets:Checking", opts = "--related-all")
         ledger.load()
         return
-        print "Matching up the ledger and the statements."
+        log.info( "Matching up the ledger and the statements." )
     
         TXS = { 'ledger':ledger, 'bank':chase }
         PAC = { # Postings to Accounts:Checking
