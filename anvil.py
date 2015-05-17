@@ -13,8 +13,9 @@ import os, sys
 
 from config import config as c
 from banks import Banks
+from ledger import Ledger
 from errs import ConfigError
-from accountant import Accountant, Bank_Accountant, Stacy
+from accountant import Stacy 
 import dispatch
 import display, display_cl, display_csv
 import util as u
@@ -111,6 +112,7 @@ class Dispatch(dispatch.Dispatch):
             self.display = display_csv # but the user can choose csv
 
     def _load_banks(self):
+        print "Loading bank statements"
         if not self.banks:
             self.banks = Banks()
             for bank_name, bank in c['banks'].items():
@@ -146,14 +148,23 @@ class Dispatch(dispatch.Dispatch):
 
     def reconcile(self, **kwargs):
         """Match transactions in the ledger and bank statements."""
-        return
-        if not chase:
-            print "Loading bank statements."
-            chase = Chase()
-            chase.load_from_statements()
+
+        # If a set of accounts hasn't been provided, load them here.
+        if not kwargs.setdefault('accounts', None):
+            self._load_banks()
+            for name, bank in self.banks.items():
+                self.reconcile(accounts = bank)
+            return
+
+        accountant = Stacy()
+        for name, account in kwargs['accounts'].items():
+            pass
         print "Loading ledger."
-        ledger = Ledger(search="Assets:Checking", opts = "--related-all") # fname="test/main.ledger", 
+        #print kwargs['accounts']['statements-dir']
+        print kwargs['accounts'].keys()
+        ledger = Ledger(search="Assets:Checking", opts = "--related-all")
         ledger.load()
+        return
         print "Matching up the ledger and the statements."
     
         TXS = { 'ledger':ledger, 'bank':chase }
