@@ -18,6 +18,8 @@ from accountant import Accountant, Bank_Accountant, Stacy
 import dispatch
 import display, display_cl, display_csv
 import util as u
+from logger import logger
+log = logger.get_logger()
 
 def parse_args():
     import argparse
@@ -37,6 +39,8 @@ def parse_args():
     parser.add_argument('args', type=str, nargs='*', default=[], help='arguments to the command')
     parser.add_argument('-f', '--file', type=str, default=None, help='the ledger file to parse')
     parser.add_argument('-o', '--output', type=str, default=None, help='redirect output to a file (not implemented)')
+    parser.add_argument('-v', '--verbose', action='store_true', default=False, help='be more verbose about status messages')
+    parser.add_argument('-q', '--quiet', action='store_true', default=False, help='be quieter and print fewer status messages')
     parser.add_argument('--csv', action='store_true', default=False, help='output in csv format')
     parser.add_argument('-h', '--help', action='store_true', help='display this help message. Specify a command for detailed help on that command.')
 
@@ -47,10 +51,11 @@ def parse_args():
     if args['help']:
         if not args['command']:
             parser.print_help()
+            print
             sys.exit()
             return
         if not args['command'] in dispatch._valid_commands():
-            sys.stderr.write("Unknown command: %s\n" % args['command'])
+            log.error(("Unknown command: %s\n" % args['command']))
         else:
             print "%s: %s" % (args['command'].upper(), help_str[args['command']])
         sys.exit()
@@ -59,6 +64,15 @@ def parse_args():
     # line above, the detailed help breaks because it relies on
     # command being blank sometimes.
     if not args['command']: args['command'] = 'audit'
+
+    # Handle logging arguments
+    if args['verbose']:
+        logger.set_level("debug")
+    del args['verbose']
+    if args['quiet']:
+        logger.set_level("warn")
+    del args['quiet']
+    log.debug("args: %s" % args)
 
     # Handle file argument
     if args['file']:
@@ -69,7 +83,8 @@ def parse_args():
     valid_commands = dispatch._valid_commands()
     if not args['command'] in valid_commands:
         parser.print_help()
-        print "\nUnknown command (%s).  Please try one of these: %s" % (args['command'], " ".join(valid_commands))
+        print
+        log.error("Unknown command (%s).  Please try one of these: %s" % (args['command'], " ".join(valid_commands)))
         sys.exit()
     args['command'] = args['command'].replace('-','_')
 
@@ -79,7 +94,6 @@ def parse_args():
     # display.Display.  Our change will be inherited too.
     if args.setdefault('output', None):
         display.Display.output_file = args['output']
-
 
     return args
 
