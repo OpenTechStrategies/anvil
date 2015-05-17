@@ -10,6 +10,9 @@ from transactions import ParseError, Transaction, Transactions, Posting
 import util as u
 from config import config as c
 
+from logger import logger
+log = logger.get_logger()
+
 def strip(a,b,c):
     return ''.join(c).strip()
 
@@ -150,13 +153,19 @@ class Ledger(Transactions):
             self.append(t)
 
     def load(self, search=None, opts=None):
-        """
-        Use ledger's xml function to get transactions.
+        """Use ledger's xml function to get transactions.
 
         search will add terms to the commandline ledger call so you can grab a subset of entries
+
+        We don't just ask ledger to parse everything wholesale because
+        it will hide the metadata about which files transactions
+        belong in. So we load each file into memory, remove the
+        directives to load adjunct ledger files, then load those files
+        ourselves.
+
         """
         def load_file(fname, files_to_load):
-            print "Loading " + fname
+            log.info("Loading " + fname)
             lines = u.slurp(fname)
             ledger = ""
             
@@ -169,10 +178,7 @@ class Ledger(Transactions):
                     files_to_load.append(new_fname)
                 else:
                     ledger += line + "\n"
-
-            proc = subprocess.Popen("ledger -f - %s xml %s" % (ledger_opts, search), shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-            (stdout, stderr) = proc.communicate(ledger)
-            return stdout
+            return call_ledger("ledger -f - {0} xml {1}".format(ledger_opts, search), fname, ledger)
 
         if search == None:
             search = self.search
@@ -186,6 +192,20 @@ class Ledger(Transactions):
         for fname in files_to_load:
             xml = load_file(fname, files_to_load) # note: this appends to files_to_load
             self.parse_xml(xml, fname)
+
+def call_ledger(cmd, fname="", stdin=""):
+    """This calls ledger and returns the result. If ledger writes to
+    stderr, we complain and raise ParseError
+
+    """
+    if not fname:
+        fname = "the ledger file"
+    proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (stdout, stderr) = proc.communicate(stdin)
+    if stderr and not stdout:
+        log.debug("Ledger error: {0}".format(stderr))
+        raise ParseError("Ledger could not parse {0}. Please correct the file.".format(fname))
+    return stdout            
 
 class Balance(dict):
     """Run a balance command and represent the results."""
@@ -202,7 +222,7 @@ class Balance(dict):
         """Run the balance command from ledger and grab the results
         """
         cmd_line = "ledger -f " + self.fname + " " + self.opts + " balance " + self.search
-        self.bal_lines = subprocess.check_output(cmd_line, shell=True).split("\n")
+        self.bal_lines = call_ledger(cmd_line, self.fname).split("\n")
 
         if self.bal_lines == ['']:
             self.balance = 0
