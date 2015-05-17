@@ -36,6 +36,8 @@ class Logger(object):
     """This class is designed to be a singleton. Use the instance below,
     as it will handle setting the level for you.
 
+    This class manages the loggers.
+
     """
 
     loggers = []
