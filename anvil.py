@@ -22,8 +22,7 @@ import util as u
 from logger import logger
 log = logger.get_logger()
 
-import pprint
-pp = pprint.PrettyPrinter(indent=4).pprint
+from util import pp, pf
 
 def parse_args():
     import argparse
@@ -41,6 +40,7 @@ def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, add_help=False, description=description)
     parser.add_argument('command', type=str, nargs='?', help='a command for anvil to run')
     parser.add_argument('args', type=str, nargs='*', default=[], help='arguments to the command')
+    parser.add_argument('-b', '--begin-date', type=str, default=None, help='ignore transactions before this date')
     parser.add_argument('-f', '--file', type=str, default=None, help='the ledger file to parse')
     parser.add_argument('-o', '--output', type=str, default=None, help='redirect output to a file (not implemented)')
     parser.add_argument('-v', '--verbose', action='store_true', default=False, help='be more verbose about status messages')
@@ -156,20 +156,29 @@ class Dispatch(dispatch.Dispatch):
         if not kwargs.setdefault('accounts', None):
             self._load_banks()
             for name, bank in self.banks.items():
-                self.reconcile(accounts = bank)
+                kwargs['accounts'] = bank
+                self.reconcile(**kwargs)
             return
+
+        begin_date = ""
+        if 'begin_date' in kwargs and kwargs['begin_date']: begin_date = " -b " + kwargs['begin_date']
 
         accountant = Stacy()
         for name, account in kwargs['accounts'].items():
             log.info( "Loading ledger." )
-            ledger = Ledger(search=account.ledger_account, opts = "--related-all")
+            ledger = Ledger(search=account.ledger_account, opts = "--related-all" + begin_date)
             ledger.load()
+
+            # collect the entries that aren't for our checking account
+            non_ac_ledger = Ledger(search=r"\(liabilities or expenses\) and not " + account.ledger_account, opts = "--related-all" + begin_date)
+            non_ac_ledger.load() # These are the txs that can easily be mistakes
+
             log.info( "Matching up the ledger and the statements." )
 
             # Store our two transactions objects. These hold lists of all
             # our transactions and we're going to reconcile one against
             # the other.
-            TXS = { 'ledger':ledger, 'bank':account }
+            TXS = { 'ledger':ledger, 'bank':account, 'non_ac':non_ac_ledger }
 
             # This section does a few things:
             #
@@ -196,29 +205,74 @@ class Dispatch(dispatch.Dispatch):
                             posting.same_amount = []
 
                             amts[act].setdefault(posting['amount'], []).append(posting)
-                            print posting['amount'], [p['tx'].get_date() for p in amts[act][posting['amount']]]
 
-            return
+            # hash non-checking account posting amounts to the non-checking-account txs that contain them
+            non_ac_amts = {}
+            for tx in non_ac_ledger:
+                for amt in list(set([abs(p['amount']) for p in tx['postings']])):
+                    non_ac_amts.setdefault(amt, []).append(tx)
+                
+            # We now have all the postings for any given amount for
+            # both the ledger and the bank, hashed by amount. We have
+            # non-checking account txs from the ledger, hashed by
+            # amount. We've also hashed total tx checking account
+            # amounts to txs that have multiple checking account
+            # postings.
+
+            
+            # For every posting or group of postings in the ledger, we
+            # want to match it to one in the statements. First, we
+            # check the posting date and see if that narrows it down
+            # to only one option. Second, we check the note and see if
+            # that narrows it further. If not, we make a list of all
+            # possible options.
+
             # Identify each posting's candidate matche(s)
+            from transactions import Transactions
+            no_candidates = Transactions()
             for act in ['ledger','bank']: 
                 other = 'ledger' if act == 'bank' else 'bank'
-                print other
                 for tx in TXS[act]: # step through every tx in ledger, then bank
+                    print tx
+                    print tx['postings'][1].get_date()
+                    print tx['postings'][1]['note']
+                    print tx['postings'][1]['aux_date']
+                    sys.exit()
                     for posting in tx.pac: # go through the checking account postings
+                        if not posting['amount'] in amts[other] and not posting['amount'] in multi_amts[other]:
+                            if not tx in no_candidates:
+                                no_candidates.append(tx)
+
                         for atx in amts[other].setdefault(posting['amount'], []):
+
+                            # skip matches to self
                             try:
                                 if atx['tx'] == tx: continue # some of atx are of type posting
-                                print atx['tx']['tags']['id']
                             except TypeError:
                                 if atx[0]['tx'] == tx: continue # some of atx are lists of posting instances
-                                print [p['tx']['tags']['id'] for p in atx]
 
+                            # this is a potential match to tx
 
                         #same_amount = [atx['tx']['tags']['id'] for atx in amts[other].setdefault(posting['amount'], []) if atx['tx'] != tx]
 
                         # same_amount is a list of transaction ids
                         #pp (same_amount)
 
+            #if len(no_candidates) > 0:
+            #    print "Transaction for which we found no possible matches:"
+            #    print "Clean those up before continuing."
+            #    sys.exit()
+
+            return
+            for act in ['ledger','bank']:
+                for amt in amts[act]:
+                    print ( "{0}: {1}".format(amt, pf([p['tx'].get_date() for p in amts[act][amt]])) )
+                for amt, postings in multi_amts[act].items():
+                    print ( "{0}: {1}".format(amt, pf([p[0]['tx'].get_date() for p in postings])) )
+                 #   print amt, multi_amts[act]
+#                            print posting['amount'], [p['tx'].get_date() for p in amts[act][posting['amount']]]
+
+            return
 
     def nop(self, **kwargs):
         """Do nothing. Used for tests. Limits execution to main.
