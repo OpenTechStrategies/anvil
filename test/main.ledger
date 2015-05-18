@@ -1,0 +1,23 @@
+;; This is a test ledger file we use for testing anvil
+
+2010/01/01 (1) Hangover Harry's
+    ;OMG, I am so hung over
+    Expenses:James:Brunch                                        $20.10
+    Liabilities:Payable:James:Solo
+
+2011/1/3=2011/11/1 Opal Mathieu  ;note the auxilliary date
+    Expenses:James:Travel                                 $ 10.85
+    Liabilities:Payable:James:Solo
+
+2011/1/3 Unbillable Expenses: Travel to Mt. Laurel  ; this tx only has a one-char month
+    Expenses:James:Travel                                 $ 110.85
+    Liabilities:Payable:James:Solo
+
+2011/10/3 Unbillable Expenses: Travel to Mt. Laurel  ; this tx only has a one-char day
+    Expenses:James:Travel                                 $ 110.85
+    Liabilities:Payable:James:Solo
+
+2015/02/04 Karl Fogel
+    ; Note on separate line
+    Account:Checking:Karl                     $50
+    Expenses:Tech                                     25

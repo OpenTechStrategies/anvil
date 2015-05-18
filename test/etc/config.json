@@ -1,0 +1,15 @@
+{
+    "Comment": "Test file for anvil",
+    "OTS-root":"/media/mmc/OpenTechStrategies",
+    "ledger-file":"/src/sledge/anvil/test/main.ledger",
+    "banks": {
+	"Chase Bank" :	{
+	    "accounts": {
+		"Preferred Business Checking": {
+		    "statements-dir":"/finances/statements",
+		    "ledger-account":"Assets:Checking"
+		}
+	    }
+	}
+    }
+}

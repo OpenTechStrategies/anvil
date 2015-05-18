@@ -1,0 +1,20 @@
+2010/01/01 (1) Hangover Harry's
+    ;OMG, I am so hung over
+    Expenses:James:Brunch                                        $20.10  ;[=2010/01/02] This didn't post until next day
+    Accounts:Checking
+
+2010/01/01=2010/01/03 (1) Hangover Harry's
+    ;OMG, I am so hung over
+    Expenses:James:Brunch                                        $20.10
+    Accounts:Checking
+
+2010/01/01=2010/01/04 (1) Hangover Harry's
+    ;OMG, I am so hung over
+    Expenses:James:Brunch                                        $20.10  ;[=2010/01/02] This didn't post until next day
+    Accounts:Checking
+
+2010/01/05 (1) Hangover Harry's
+    ;OMG, I am so hung over
+    Expenses:James:Brunch                                        $20.10
+    Accounts:Checking
+

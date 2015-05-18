@@ -5,6 +5,10 @@ package. The tools are aimed at making it easier to catch and fix
 mistakes and omissions. We'd like to make it easier and faster to
 reconcile checking accounts and the ledger.
 
+# Dependencies
+
+python-pytest python-pytest-cov
+
 # Downloading statements
 
 For this, we're using the PDFs, not the CSV.
