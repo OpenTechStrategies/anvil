@@ -6,8 +6,7 @@ import dateutil, os, subprocess, sys
 from decimal import Decimal, ROUND_HALF_UP
 import xml.etree.ElementTree as ET
 
-import pprint
-pp = pprint.PrettyPrinter(indent=4).pprint
+from util import pp, pf
 
 from transactions import ParseError, Transaction, Transactions, Posting
 import util as u
@@ -19,18 +18,20 @@ log = logger.get_logger()
 def strip(a,b,c):
     return ''.join(c).strip()
 
-def call_ledger(cmd, fname="", stdin=""):
+def call_ledger(cmd, fname="", stdin="", start_date=""):
     """This calls ledger and returns the result. If ledger writes to
     stderr, we complain and raise ParseError
 
     """
-    if not fname:
-        fname = "the ledger file"
+    if start_date: start_date = "-b " + start_date
+    cmd = "ledger {1} {0}".format(cmd, start_date)
     proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (stdout, stderr) = proc.communicate(stdin)
     if stderr and not stdout:
         log.debug("Ledger error: {0}".format(stderr))
-        raise ParseError("Ledger could not parse {0}. Please correct the file.".format(fname))
+        if not fname:
+            fname = "the ledger file"
+        raise ParseError("Ledger could not parse {0} with cmd {1}. Please correct the file.".format(fname, cmd))
     return stdout            
 
 class Ledger(Transactions):
@@ -130,12 +131,18 @@ class Ledger(Transactions):
 
         Also remember the name of file it came from."""
 
-        def set_if_found(tx, t, field, default=None):
+        def set_if_found(tx, t, field, default=None, force_default=False, rename_field=None):
             temp = tx.find(field)
             if temp != None:
-                t[field] = temp.text
-            elif default:
-                t[field] = default
+                if rename_field:
+                    t[rename_field] = temp.text
+                else:
+                    t[field] = temp.text
+            elif default or force_default:
+                if rename_field:
+                    t[rename_field] = default
+                else:
+                    t[field] = default
 
         for tx in ET.fromstring(xml).find('transactions'):
             t = Transaction()
@@ -166,6 +173,9 @@ class Ledger(Transactions):
                 p['state'] = posting.attrib.setdefault('state', '')
                 set_if_found(posting, p, 'note', '')
                 p['tx'] = t # point back at parent
+                set_if_found(posting, p, 'aux-date', rename_field="aux_date")
+                if 'aux_date' in p:
+                    p['aux_date'] = dateutil.parser.parse(p['aux_date'])
                 t['postings'].append(Posting(**p))
             self.append(t)
 
@@ -195,7 +205,7 @@ class Ledger(Transactions):
                     files_to_load.append(new_fname)
                 else:
                     ledger += line + "\n"
-            return call_ledger("ledger -f - {0} xml {1}".format(ledger_opts, search), fname, ledger)
+            return call_ledger("-f - {0} xml {1}".format(ledger_opts, search), fname, ledger)
 
         if search == None:
             search = self.search
@@ -224,7 +234,7 @@ class Balance(dict):
     def run(self):
         """Run the balance command from ledger and grab the results
         """
-        cmd_line = "ledger -f " + self.fname + " " + self.opts + " balance " + self.search
+        cmd_line = "-f " + self.fname + " " + self.opts + " balance " + self.search
         self.bal_lines = call_ledger(cmd_line, self.fname).split("\n")
 
         if self.bal_lines == ['']:
