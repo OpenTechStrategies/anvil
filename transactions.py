@@ -35,12 +35,12 @@ class Posting(dict):
     def __init__(self, **initial_vals):
         dict.__init__(self)
         self.update({
+            'aux_date':None,
             'account_ref':'',
             'account_name':None,
             'amount':None, 
             'commodity':'', # usually will be $
             'commodity_flags':'',
-            'date':None,
             'note':"",
             'state':"",
             'tx':None,
@@ -69,6 +69,11 @@ class Posting(dict):
         if [debit for debit in ["assets", "expenses", "debits", "losses", "dividends"] if self['account_name'].lower().startswith(debit)]:
             width = 75
         return account + (" " * (width-len(account+amt))) + amt + note + "\n"
+    def get_date(self, field="aux_date"):
+        try:
+            return self[field].strftime("%Y/%m/%d")
+        except AttributeError:
+            return self['tx'].get_date("aux_date")
 
 class Transaction(dict):
     """
@@ -113,7 +118,10 @@ class Transaction(dict):
         self.update(initial_vals)
 
     def get_date(self, field="date"):
-        return self[field].strftime("%Y/%m/%d")
+        try:
+            return self[field].strftime("%Y/%m/%d")
+        except AttributeError:
+            return self['date'].strftime("%Y/%m/%d")
 
     def make_match_date_amounts(self, day_range=3):
         """Make a list of dates associated with a tx. Make a list of amounts
