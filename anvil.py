@@ -22,6 +22,9 @@ import util as u
 from logger import logger
 log = logger.get_logger()
 
+import pprint
+pp = pprint.PrettyPrinter(indent=4).pprint
+
 def parse_args():
     import argparse
 
@@ -158,48 +161,63 @@ class Dispatch(dispatch.Dispatch):
 
         accountant = Stacy()
         for name, account in kwargs['accounts'].items():
-            pass
-        log.info( "Loading ledger." )
-        #print kwargs['accounts']['statements-dir']
-        log.info( kwargs['accounts'].keys() )
-        ledger = Ledger(search="Assets:Checking", opts = "--related-all")
-        ledger.load()
-        return
-        log.info( "Matching up the ledger and the statements." )
-    
-        TXS = { 'ledger':ledger, 'bank':chase }
-        PAC = { # Postings to Accounts:Checking
-            'ledger':[],
-            'bank':[]
-        }
+            log.info( "Loading ledger." )
+            ledger = Ledger(search=account.ledger_account, opts = "--related-all")
+            ledger.load()
+            log.info( "Matching up the ledger and the statements." )
 
-        # This section does a few things:
-        #
-        #  * Make lists of the Accounts:Checking postings except for
-        #    transactions where the postings zero each other out.  
-        #
-        #  * Make amts dict that hashes amounts to postings.
-        amts = {}
-        for act in ['ledger','bank']:
-            for tx in TXS[act]:
-                tx.pac = [] # we'll save the postings so we don't have to collect each time
-                postings = [posting for posting in tx['postings'] if posting['account_name'].lower().startswith("assets:checking")]
-                if sum([posting['amount'] for posting in postings]) != 0:
-                    tx.pac.append(posting)
-                    for posting in postings:
-                        PAC[act].append(posting)
-                        if not posting['amount'] in amts:
-                            amts[posting['amount']] = []
-                        amts[posting['amount']].append( posting )
-    
-        # Identify each posting's candidate matche(s)
-        for act in ['ledger','bank']:
-            for tx in TXS[act]:
-                for posting in tx.pac:
-                    same_amount = [atx['tx']['tags']['id'] for atx in amts[posting['amount']] if atx['tx'] != tx]
- 
-        #print PAC['ledger']
-        #print PAC['bank']
+            # Store our two transactions objects. These hold lists of all
+            # our transactions and we're going to reconcile one against
+            # the other.
+            TXS = { 'ledger':ledger, 'bank':account }
+
+            # This section does a few things:
+            #
+            #  * Make lists of the checking account postings except for
+            #    transactions where the postings zero each other out.  
+            #
+            #  * Make amts dict that hashes amounts to a posting of that amount
+            #  * Make multi_amts dict that hashes amounts to postings that sum to that amount
+            amts = {} 
+            multi_amts = {} 
+            for act in ['ledger','bank']:
+                amts[act] = {} # hash amount to a posting of that amount
+                multi_amts[act] = {} # hash amount to a list of checking account postings that sum to that amount
+                for tx in TXS[act]:
+                    tx.pac = []
+                    postings = [posting for posting in tx['postings'] if posting['account_name'].lower().startswith(account.ledger_account.lower())]
+                    total = sum([posting['amount'] for posting in postings]) # total of the checking account postings
+                    if total != 0: # check if checking account postings don't cancel out
+                        if len(postings) > 1:
+                            # Add postings to list of all groups of postings with the same amount as the total of this posting
+                            multi_amts[act].setdefault(total, []).append(postings)
+                        for posting in postings:
+                            tx.pac.append(posting)
+                            posting.same_amount = []
+
+                            amts[act].setdefault(posting['amount'], []).append(posting)
+                            print posting['amount'], [p['tx'].get_date() for p in amts[act][posting['amount']]]
+
+            return
+            # Identify each posting's candidate matche(s)
+            for act in ['ledger','bank']: 
+                other = 'ledger' if act == 'bank' else 'bank'
+                print other
+                for tx in TXS[act]: # step through every tx in ledger, then bank
+                    for posting in tx.pac: # go through the checking account postings
+                        for atx in amts[other].setdefault(posting['amount'], []):
+                            try:
+                                if atx['tx'] == tx: continue # some of atx are of type posting
+                                print atx['tx']['tags']['id']
+                            except TypeError:
+                                if atx[0]['tx'] == tx: continue # some of atx are lists of posting instances
+                                print [p['tx']['tags']['id'] for p in atx]
+
+
+                        #same_amount = [atx['tx']['tags']['id'] for atx in amts[other].setdefault(posting['amount'], []) if atx['tx'] != tx]
+
+                        # same_amount is a list of transaction ids
+                        #pp (same_amount)
 
 
     def nop(self, **kwargs):
