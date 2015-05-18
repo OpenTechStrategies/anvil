@@ -6,6 +6,9 @@ import dateutil, os, subprocess, sys
 from decimal import Decimal, ROUND_HALF_UP
 import xml.etree.ElementTree as ET
 
+import pprint
+pp = pprint.PrettyPrinter(indent=4).pprint
+
 from transactions import ParseError, Transaction, Transactions, Posting
 import util as u
 from config import config as c
@@ -125,7 +128,8 @@ class Ledger(Transactions):
     def parse_xml(self, xml, fname=None):
         """Take output from Ledger's xml command and parse it.
 
-        Also save the file it came from."""
+        Also remember the name of file it came from."""
+
         def set_if_found(tx, t, field, default=None):
             temp = tx.find(field)
             if temp != None:
@@ -161,7 +165,7 @@ class Ledger(Transactions):
                 p['amount'] = Decimal(amt.find('quantity').text)
                 p['state'] = posting.attrib.setdefault('state', '')
                 set_if_found(posting, p, 'note', '')
-                p['tx'] = t
+                p['tx'] = t # point back at parent
                 t['postings'].append(Posting(**p))
             self.append(t)
 
@@ -178,7 +182,7 @@ class Ledger(Transactions):
 
         """
         def load_file(fname, files_to_load):
-            log.info("Loading " + fname)
+            log.debug("Loading " + fname)
             lines = u.slurp(fname)
             ledger = ""
             

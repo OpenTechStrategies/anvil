@@ -37,9 +37,10 @@ class Posting(dict):
         self.update({
             'account_ref':'',
             'account_name':None,
-            'commodity':'', # usually will be $
             'amount':None, 
+            'commodity':'', # usually will be $
             'commodity_flags':'',
+            'date':None,
             'note':"",
             'state':"",
             'tx':None,

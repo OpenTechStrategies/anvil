@@ -4,6 +4,8 @@ it would get passed in on object creation.
 """
 import dateutil.parser, glob, os, re, subprocess, sys
 from decimal import Decimal
+import pprint
+pp = pprint.PrettyPrinter(indent=4).pprint
 
 from config import config as c
 from transactions import Posting, Transaction, Transactions
