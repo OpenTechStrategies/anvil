@@ -42,4 +42,3 @@ def test_posting_get_date_no_parent(loaded_ledger):
     assert ledger[0]['postings'][1].get_date(no_parent=True) == None
     assert ledger[0].get_date() == ledger[0]['postings'][1].get_date(no_parent=False)
     assert ledger[0].get_date() == ledger[0]['postings'][1].get_date()
-    assert False
