@@ -4,6 +4,14 @@ just this project.
 import os
 from decimal import Decimal
 
+import pprint
+pp = pprint.PrettyPrinter(indent=4, depth=3).pprint
+
+def pf(msg, indent=4, depth=3, *args, **kwargs):
+    kwargs['indent'] = indent
+    kwargs['depth'] = depth
+    return pprint.pformat(msg, *args, **kwargs)
+
 def fix_path(path, head='/'):
     """Given a path that might be local, relative to root or relative to
     some head directory, try to find it in the filesystem.
