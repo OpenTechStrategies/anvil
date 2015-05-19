@@ -19,5 +19,15 @@
 
 2015/02/04 Karl Fogel
     ; Note on separate line
-    Account:Checking:Karl                     $50
-    Expenses:Tech                                     25
+    Account:Checking:Karl                            $-50
+    Expenses:Tech                                    
+
+2015/02/04 Karl Fogel
+    ; More tech purchases for Karl
+    Account:Checking:Karl                            $-75
+    Expenses:Tech                                    
+
+2014/06/01 Pay invoice 610879613 from RimuHosting.com.  June fee for ttmdev.opentechstrategies.com (which RIMU thinks is "ttm.lisc-chicago.org") hosting.  Billed to OTS card 2238.
+    Expenses:Client-Reimbursable:LISC                              $ 33.32
+    * Assets:Checking:Karl                                           $-33.32 ;[=2014/06/02]
+
