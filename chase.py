@@ -25,6 +25,9 @@ class Statement(dict):
         self.fname = fname
         self.ledger_account = ledger_account
         self.fname_text = os.path.splitext(fname)[0]+".txt"
+        #self.fname_ledger = os.path.splitext(fname)[0]+".ledger"
+        #if os.path.exists(self.fname_ledger):
+        #    self.load_from_ledger():
         if os.path.exists(self.fname_text):
             self.load_from_text()
         else:
@@ -308,7 +311,9 @@ class Account(Transactions):
             self.rename_pdf(fname)
 
     def load_from_statements(self):
-        """Pull all transactions from the PDF statements, sort them by date.
+        """Pull all transactions from the PDF statements, sort them by
+        date.
+
         """
         for fname in sorted(glob.glob(os.path.join(self.statements_dir, "20??_??.pdf"))):
             statement = Statement(fname, self.ledger_account)
@@ -318,6 +323,9 @@ class Account(Transactions):
         self.account_num = self.statements[0]['account_num']
 
         self.sort()
+
+        # save a copy of this bank statement as a ledger file
+        #self.write(os.path.join(os.path.split(c['ledger-file'])[0], (self.bank_name + "-" + self.name).replace(' ','_')+".ledger"))
 
 class Chase(dict):
     """A dict of accounts at Chase. Name of account hashes to the account object. We only have one, so support for multiples is rudimentary right now."""
