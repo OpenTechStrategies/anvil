@@ -219,7 +219,8 @@ class Ledger(Transactions):
         for fname in files_to_load:
             xml = load_file(fname, files_to_load) # note: this appends to files_to_load
             self.parse_xml(xml, fname)
-
+        self.sort()
+        #self.write("main.print.ledger")
 class Balance(dict):
     """Run a balance command and represent the results."""
     def __init__(self, search="", opts="", fname=None):
