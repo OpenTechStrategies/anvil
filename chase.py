@@ -96,10 +96,11 @@ class Statement(dict):
 
     def complete_date(self, date):
         """Given a month/year in \d\d/\d\d format, use the statement start and
-        end dates to figure out the year.  This is mostly to handle
-        stuff that comes late in Dec for a Dec to Jan statement. I
-        imagine this will only ever apply to events on the the 31st of
-        Dec.
+        end dates to figure out the year. Return it as a parsed date.
+        This is mostly to handle stuff that comes late in Dec for a
+        Dec to Jan statement. I imagine this will only ever apply to
+        events on the the 31st of Dec.
+
         """
         year = self['end_date'].year
         if (self['start_date'].year != self['end_date'].year
