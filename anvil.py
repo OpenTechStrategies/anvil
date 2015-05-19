@@ -180,6 +180,7 @@ class Dispatch(dispatch.Dispatch):
             # the other.
             TXS = { 'ledger':ledger, 'bank':account, 'non_ac':non_ac_ledger }
 
+            
             # This section does a few things:
             #
             #  * Make lists of the checking account postings except for
@@ -187,11 +188,31 @@ class Dispatch(dispatch.Dispatch):
             #
             #  * Make amts dict that hashes amounts to a posting of that amount
             #  * Make multi_amts dict that hashes amounts to postings that sum to that amount
-            amts = {} 
-            multi_amts = {} 
+            #  * Make dates dict that hashes dates to postings and txs that sum to that amount
+
+            class Index(object):
+                """
+                An index into the universe of postings.
+                """
+                def __init__(self):
+                    self.solo = {'ledger': {}, 'bank': {}} # hash to single posting 
+                    self.multi = {'ledger': {}, 'bank': {}} # has to list of postings
+                    self.combined = {'ledger': {}, 'bank': {}}
+                def combine(self):
+                    "make a combined lookup for both multi and solo."
+                    for act in ['ledger', 'bank']:
+                        for key, val in self.solo[act].items():
+                            self.combined[act].setdefault(key, []).append(val)
+                            for multi in self.multi[act].setdefault(key, []):
+                                self.combined[act].setdefault(key, []).append(multi)
+
+            amts = Index()
+            dates = Index()
             for act in ['ledger','bank']:
-                amts[act] = {} # hash amount to a posting of that amount
-                multi_amts[act] = {} # hash amount to a list of checking account postings that sum to that amount
+                TXS[act].make_index("date", 
+                                    lambda tx: [posting for posting in tx['postings'] if posting['account_name'].lower().startswith(account.ledger_account.lower())],
+                                    lambda tx: tx.get_date())
+                #TXS[act].make_index("amount", True, lambda tx: tx.get_date())
                 for tx in TXS[act]:
                     tx.pac = []
                     postings = [posting for posting in tx['postings'] if posting['account_name'].lower().startswith(account.ledger_account.lower())]
@@ -199,13 +220,23 @@ class Dispatch(dispatch.Dispatch):
                     if total != 0: # check if checking account postings don't cancel out
                         if len(postings) > 1:
                             # Add postings to list of all groups of postings with the same amount as the total of this posting
-                            multi_amts[act].setdefault(total, []).append(postings)
+                            amts.multi[act].setdefault(total, []).append(postings)
+                            dates.multi[act].setdefault(tx.get_date(), []).append(postings)
                         for posting in postings:
                             tx.pac.append(posting)
                             posting.same_amount = []
 
-                            amts[act].setdefault(posting['amount'], []).append(posting)
+                            amts.solo[act].setdefault(posting['amount'], []).append(posting)
+                            dates.solo[act].setdefault(posting.get_date(), []).append(posting)
+            amts.combine()
+            dates.combine()
 
+            for tx in TXS['ledger']:
+                for posting in tx.pac:
+                    pp (posting)
+                    #TXS['bank'].index['date']
+                    #posting.amount
+            sys.exit()
             # hash non-checking account posting amounts to the non-checking-account txs that contain them
             non_ac_amts = {}
             for tx in non_ac_ledger:
@@ -233,17 +264,28 @@ class Dispatch(dispatch.Dispatch):
             for act in ['ledger','bank']: 
                 other = 'ledger' if act == 'bank' else 'bank'
                 for tx in TXS[act]: # step through every tx in ledger, then bank
-                    print tx
-                    print tx['postings'][1].get_date()
-                    print tx['postings'][1]['note']
-                    print tx['postings'][1]['aux_date']
-                    sys.exit()
                     for posting in tx.pac: # go through the checking account postings
-                        if not posting['amount'] in amts[other] and not posting['amount'] in multi_amts[other]:
+                        if not posting['amount'] in amts.solo[other] and not posting['amount'] in amts.multi[other]:
                             if not tx in no_candidates:
                                 no_candidates.append(tx)
 
-                        for atx in amts[other].setdefault(posting['amount'], []):
+                        pdate = posting.get_date(no_parent=True)
+                        if pdate:
+                            if not pdate in dates.solo[other]:
+                                print [d for d in dates.solo[other].keys()]
+                                log.warn("Posting specifies a date of {1} but I couldn't find a paired bank statement entry.\n{0}".format(tx, pdate))
+
+                            if pdate in dates.solo[other]:
+                                print posting['amount'], [p['amount'] for p in dates.solo[other][pdate]]
+
+                            elif pdate in dates.multi[other]:
+                                print [p.get_date() for p in dates.multi[other][pdate]]
+
+
+                        continue
+                        for atx in amts.combined[other].setdefault(posting['amount'], []):
+
+                            # atx is now a transaction w/ postings that match tx individually or in sum
 
                             # skip matches to self
                             try:
@@ -251,9 +293,8 @@ class Dispatch(dispatch.Dispatch):
                             except TypeError:
                                 if atx[0]['tx'] == tx: continue # some of atx are lists of posting instances
 
-                            # this is a potential match to tx
 
-                        #same_amount = [atx['tx']['tags']['id'] for atx in amts[other].setdefault(posting['amount'], []) if atx['tx'] != tx]
+                        #same_amount = [atx['tx']['tags']['id'] for atx in amts.solo[other].setdefault(posting['amount'], []) if atx['tx'] != tx]
 
                         # same_amount is a list of transaction ids
                         #pp (same_amount)
@@ -265,9 +306,9 @@ class Dispatch(dispatch.Dispatch):
 
             return
             for act in ['ledger','bank']:
-                for amt in amts[act]:
-                    print ( "{0}: {1}".format(amt, pf([p['tx'].get_date() for p in amts[act][amt]])) )
-                for amt, postings in multi_amts[act].items():
+                for amt in amts.solo[act]:
+                    print ( "{0}: {1}".format(amt, pf([p['tx'].get_date() for p in amts.solo[act][amt]])) )
+                for amt, postings in amts.multi[act].items():
                     print ( "{0}: {1}".format(amt, pf([p[0]['tx'].get_date() for p in postings])) )
                  #   print amt, multi_amts[act]
 #                            print posting['amount'], [p['tx'].get_date() for p in amts[act][posting['amount']]]
