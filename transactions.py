@@ -119,7 +119,16 @@ class Transaction(dict):
             self['tags']['id'] = random.randint(0,10000000)
         self.update(initial_vals)
 
-    def get_date(self, field="date"):
+    def get_date(self, field="date", posting=None):
+        """If posting is specified, try to get the aux date of the posting whose
+        account matches the param. There might be more than one matching
+        posting, so we might return a list of dates."""
+        if posting:
+            dates = filter(lambda x: x, [p.setdefault('aux_date', None) for p in self['postings'] if p['account_name'].lower().startswith(posting.lower())])
+            if len(dates) == 1:
+                return dates[0]
+            elif len(dates) > 1:
+                return dates
         try:
             return self[field].strftime("%Y/%m/%d")
         except AttributeError:
