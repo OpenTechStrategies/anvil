@@ -69,10 +69,12 @@ class Posting(dict):
         if [debit for debit in ["assets", "expenses", "debits", "losses", "dividends"] if self['account_name'].lower().startswith(debit)]:
             width = 75
         return account + (" " * (width-len(account+amt))) + amt + note + "\n"
-    def get_date(self, field="aux_date"):
+    def get_date(self, field="aux_date", no_parent=False):
         try:
             return self[field].strftime("%Y/%m/%d")
         except AttributeError:
+            if no_parent:
+                return None
             return self['tx'].get_date("aux_date")
 
 class Transaction(dict):
@@ -194,6 +196,35 @@ class Transactions(list):
     def __init__(self, loaded=False):
         list.__init__(self)
         self.loaded=loaded
+        self.index = {}
+
+    def make_index_postings(self, name, predicate, key_func):
+        """Takes every posting of every tx for which predicate(tx, posting) is
+        true and indexes it under self.index[key_func(tx, posting)]
+
+        If predicate = True, we'll index all the postings.
+
+        """
+        self.index[name] = {}
+        for tx in self:
+            for posting in tx:
+                if predicate or predicate(tx, posting):
+                    key = key_funct(tx, posting)
+                    if not key in self.index[name]:
+                        self.index[name].setdefault(key, []).append(posting)
+
+    def make_index(self, name, predicate=None, key_func=None):
+        """Takes every tx for which predicate(tx) is true and indexes it under
+        key_func(tx).
+
+        If predicate = True, we'll index all the transactions.
+        """
+        self.index[name] = {}
+        for tx in self:
+            if predicate or predicate(tx):
+                key = key_func(tx)
+                if not key in self.index[name]:
+                    self.index[name].setdefault(key, []).append(tx)
 
     def sum(self, account):
         """Add up all the amounts in accounts that start with account."""
@@ -241,7 +272,7 @@ class Transactions(list):
                 tx['tags']['possible_match_dates'] = [otx.get_date() for otx in tx['match_tx']]
     def write(self, fname):
         with open(fname, 'w') as OUTF:
-            OUTF.write(self.__unicode__())
+            OUTF.write(self.__unicode__().encode('utf8'))
     def __unicode__(self):
         ret = ''
         for tx in self:
