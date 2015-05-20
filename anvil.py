@@ -149,7 +149,15 @@ class Dispatch(dispatch.Dispatch):
             accountant.monthly_bal(account, self.display.Monthly_Bal())
 
     def reconcile(self, **kwargs):
-        """Match transactions in the ledger and bank statements."""
+        """Match transactions in the ledger and bank statements.
+
+        This might be useful: 
+
+         * ledger -f Chase_Bank-Preferred_Business_Checking.ledger --sort 'date' print
+         * ledger -f main.ledger --sort 'date' print
+
+        """
+
 
         # If a set of accounts hasn't been provided, load them here.
         if not kwargs.setdefault('accounts', None):
@@ -167,7 +175,11 @@ class Dispatch(dispatch.Dispatch):
             log.info( "Loading ledger." )
             ledger = Ledger(search=account.ledger_account, opts = "--related-all" + begin_date)
             ledger.load()
+            from accountant import Reconciler
+            reconciler = Reconciler(ledger, account)
+            reconciler.reconcile()
 
+            sys.exit()
             # collect the entries that aren't for our checking account
             non_ac_ledger = Ledger(search=r"\(liabilities or expenses\) and not " + account.ledger_account, opts = "--related-all" + begin_date)
             non_ac_ledger.load() # These are the txs that can easily be mistakes
