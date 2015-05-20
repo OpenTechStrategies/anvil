@@ -12,8 +12,6 @@ for p in ["etc/config.json",
           os.path.join(os.path.split(__file__)[0], "etc/config.json")]:
     if os.path.exists(p):
         path = p
-    else:
-        print p
 
 if path:
     config = json.loads(u.slurp(path, split=False))
