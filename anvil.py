@@ -84,7 +84,7 @@ def parse_args():
     del args['file'] # ensure later funcs don't rely on the wrong source of the file name
 
     # Munge and validate command
-    valid_commands = dispatch._valid_commands()
+    valid_commands = [c for c in dispatch._valid_commands() if not c in dispatch._undocumented]
     if not args['command'] in valid_commands:
         parser.print_help()
         print
@@ -113,7 +113,6 @@ class Dispatch(dispatch.Dispatch):
         self.display = display_cl # cli is the default display
         if kwargs.setdefault('csv', None):
             self.display = display_csv # but the user can choose csv
-
     def _load_banks(self):
         log.info( "Loading bank statements" )
         if not self.banks:
