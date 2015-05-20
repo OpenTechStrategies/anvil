@@ -15,7 +15,7 @@ from config import config as c
 from banks import Banks
 from ledger import Ledger
 from errs import ConfigError
-from accountant import Stacy 
+from accountant import Monthly_Balancer, Reconciler 
 import dispatch
 import display, display_cl, display_csv
 import util as u
@@ -144,7 +144,7 @@ class Dispatch(dispatch.Dispatch):
             return
 
         # do the monthly balance thing for all the accounts
-        accountant = Stacy()
+        accountant = Monthly_Balancer()
         for name, account in kwargs['accounts'].items():
             accountant.monthly_bal(account, self.display.Monthly_Bal())
 
@@ -170,161 +170,12 @@ class Dispatch(dispatch.Dispatch):
         begin_date = ""
         if 'begin_date' in kwargs and kwargs['begin_date']: begin_date = " -b " + kwargs['begin_date']
 
-        accountant = Stacy()
         for name, account in kwargs['accounts'].items():
             log.info( "Loading ledger." )
             ledger = Ledger(search=account.ledger_account, opts = "--related-all" + begin_date)
             ledger.load()
-            from accountant import Reconciler
             reconciler = Reconciler(ledger, account)
             reconciler.reconcile()
-
-            sys.exit()
-            # collect the entries that aren't for our checking account
-            non_ac_ledger = Ledger(search=r"\(liabilities or expenses\) and not " + account.ledger_account, opts = "--related-all" + begin_date)
-            non_ac_ledger.load() # These are the txs that can easily be mistakes
-
-            log.info( "Matching up the ledger and the statements." )
-
-            # Store our two transactions objects. These hold lists of all
-            # our transactions and we're going to reconcile one against
-            # the other.
-            TXS = { 'ledger':ledger, 'bank':account, 'non_ac':non_ac_ledger }
-
-            
-            # This section does a few things:
-            #
-            #  * Make lists of the checking account postings except for
-            #    transactions where the postings zero each other out.  
-            #
-            #  * Make amts dict that hashes amounts to a posting of that amount
-            #  * Make multi_amts dict that hashes amounts to postings that sum to that amount
-            #  * Make dates dict that hashes dates to postings and txs that sum to that amount
-
-            class Index(object):
-                """
-                An index into the universe of postings.
-                """
-                def __init__(self):
-                    self.solo = {'ledger': {}, 'bank': {}} # hash to single posting 
-                    self.multi = {'ledger': {}, 'bank': {}} # has to list of postings
-                    self.combined = {'ledger': {}, 'bank': {}}
-                def combine(self):
-                    "make a combined lookup for both multi and solo."
-                    for act in ['ledger', 'bank']:
-                        for key, val in self.solo[act].items():
-                            self.combined[act].setdefault(key, []).append(val)
-                            for multi in self.multi[act].setdefault(key, []):
-                                self.combined[act].setdefault(key, []).append(multi)
-
-            amts = Index()
-            dates = Index()
-            for act in ['ledger','bank']:
-                TXS[act].make_index("date", 
-                                    lambda tx: [posting for posting in tx['postings'] if posting['account_name'].lower().startswith(account.ledger_account.lower())],
-                                    lambda tx: tx.get_date())
-                #TXS[act].make_index("amount", True, lambda tx: tx.get_date())
-                for tx in TXS[act]:
-                    tx.pac = []
-                    postings = [posting for posting in tx['postings'] if posting['account_name'].lower().startswith(account.ledger_account.lower())]
-                    total = sum([posting['amount'] for posting in postings]) # total of the checking account postings
-                    if total != 0: # check if checking account postings don't cancel out
-                        if len(postings) > 1:
-                            # Add postings to list of all groups of postings with the same amount as the total of this posting
-                            amts.multi[act].setdefault(total, []).append(postings)
-                            dates.multi[act].setdefault(tx.get_date(), []).append(postings)
-                        for posting in postings:
-                            tx.pac.append(posting)
-                            posting.same_amount = []
-
-                            amts.solo[act].setdefault(posting['amount'], []).append(posting)
-                            dates.solo[act].setdefault(posting.get_date(), []).append(posting)
-            amts.combine()
-            dates.combine()
-
-            for tx in TXS['ledger']:
-                for posting in tx.pac:
-                    pp (posting)
-                    #TXS['bank'].index['date']
-                    #posting.amount
-            sys.exit()
-            # hash non-checking account posting amounts to the non-checking-account txs that contain them
-            non_ac_amts = {}
-            for tx in non_ac_ledger:
-                for amt in list(set([abs(p['amount']) for p in tx['postings']])):
-                    non_ac_amts.setdefault(amt, []).append(tx)
-                
-            # We now have all the postings for any given amount for
-            # both the ledger and the bank, hashed by amount. We have
-            # non-checking account txs from the ledger, hashed by
-            # amount. We've also hashed total tx checking account
-            # amounts to txs that have multiple checking account
-            # postings.
-
-            
-            # For every posting or group of postings in the ledger, we
-            # want to match it to one in the statements. First, we
-            # check the posting date and see if that narrows it down
-            # to only one option. Second, we check the note and see if
-            # that narrows it further. If not, we make a list of all
-            # possible options.
-
-            # Identify each posting's candidate matche(s)
-            from transactions import Transactions
-            no_candidates = Transactions()
-            for act in ['ledger','bank']: 
-                other = 'ledger' if act == 'bank' else 'bank'
-                for tx in TXS[act]: # step through every tx in ledger, then bank
-                    for posting in tx.pac: # go through the checking account postings
-                        if not posting['amount'] in amts.solo[other] and not posting['amount'] in amts.multi[other]:
-                            if not tx in no_candidates:
-                                no_candidates.append(tx)
-
-                        pdate = posting.get_date(no_parent=True)
-                        if pdate:
-                            if not pdate in dates.solo[other]:
-                                print [d for d in dates.solo[other].keys()]
-                                log.warn("Posting specifies a date of {1} but I couldn't find a paired bank statement entry.\n{0}".format(tx, pdate))
-
-                            if pdate in dates.solo[other]:
-                                print posting['amount'], [p['amount'] for p in dates.solo[other][pdate]]
-
-                            elif pdate in dates.multi[other]:
-                                print [p.get_date() for p in dates.multi[other][pdate]]
-
-
-                        continue
-                        for atx in amts.combined[other].setdefault(posting['amount'], []):
-
-                            # atx is now a transaction w/ postings that match tx individually or in sum
-
-                            # skip matches to self
-                            try:
-                                if atx['tx'] == tx: continue # some of atx are of type posting
-                            except TypeError:
-                                if atx[0]['tx'] == tx: continue # some of atx are lists of posting instances
-
-
-                        #same_amount = [atx['tx']['tags']['id'] for atx in amts.solo[other].setdefault(posting['amount'], []) if atx['tx'] != tx]
-
-                        # same_amount is a list of transaction ids
-                        #pp (same_amount)
-
-            #if len(no_candidates) > 0:
-            #    print "Transaction for which we found no possible matches:"
-            #    print "Clean those up before continuing."
-            #    sys.exit()
-
-            return
-            for act in ['ledger','bank']:
-                for amt in amts.solo[act]:
-                    print ( "{0}: {1}".format(amt, pf([p['tx'].get_date() for p in amts.solo[act][amt]])) )
-                for amt, postings in amts.multi[act].items():
-                    print ( "{0}: {1}".format(amt, pf([p[0]['tx'].get_date() for p in postings])) )
-                 #   print amt, multi_amts[act]
-#                            print posting['amount'], [p['tx'].get_date() for p in amts[act][posting['amount']]]
-
-            return
 
     def nop(self, **kwargs):
         """Do nothing. Used for tests. Limits execution to main.
