@@ -131,12 +131,14 @@ class Statement(dict):
                 amt = Decimal(parts[3].replace(",","").replace("$","")) * neg
                 m = re.search("Purchase *(\d\d/\d\d)", descrip)
                 if m:
-                    aux_date = self.complete_date(m.groups()[0])
+                    date = self.complete_date(m.groups()[0])
+                    aux_date = self.complete_date(parts[0])
                     descrip = descrip.split(m.groups()[0],1)[1].strip()
                 else:
                     aux_date = None
+                    date = self.complete_date(parts[0])
 
-                tx = Transaction(**{'date':self.complete_date(parts[0]),
+                tx = Transaction(**{'date':date,
                                     'aux_date':aux_date,
                                     'payee':descrip,
                                     'file':self.fname,
