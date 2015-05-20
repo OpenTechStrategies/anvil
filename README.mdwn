@@ -5,6 +5,12 @@ package. The tools are aimed at making it easier to catch and fix
 mistakes and omissions. We'd like to make it easier and faster to
 reconcile checking accounts and the ledger.
 
+These are the onyl useful things so far:
+
+anvil monthly-bal
+
+anvil reconcile
+
 # Dependencies
 
 python-pytest python-pytest-cov
