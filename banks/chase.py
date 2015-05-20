@@ -330,8 +330,12 @@ class Account(Transactions):
         # save a copy of this bank statement as a ledger file
         #self.write(os.path.join(os.path.split(c['ledger-file'])[0], (self.bank_name + "-" + self.name).replace(' ','_')+".ledger"))
 
-class Chase(dict):
+class Bank(dict):
+    anvil_type = 'bank'
+
+class Chase(Bank):
     """A dict of accounts at Chase. Name of account hashes to the account object. We only have one, so support for multiples is rudimentary right now."""
+    name = "Chase Bank"
     def __init__(self, **kwargs):
         dict.__init__(self)
         for key, val in kwargs.items():
