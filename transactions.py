@@ -119,20 +119,41 @@ class Transaction(dict):
             self['tags']['id'] = random.randint(0,10000000)
         self.update(initial_vals)
 
-    def get_date(self, field="date", posting=None):
-        """If posting is specified, try to get the aux date of the posting whose
-        account matches the param. There might be more than one matching
-        posting, so we might return a list of dates."""
+    def get_date(self, field="date", posting=None, no_parent=False, return_string=True):
+        """If posting is specified, try to get the aux date of the posting
+        whose account matches the param. There might be more than one
+        matching posting, so we might return a list of dates. Posting
+        param automatically changes the field param to "aux_date".
+
+        no_parent only makes sense if you're looking at posting
+        dates. Set it to true, and if we can't find a matching posting
+        with a date, we'll return None
+
+        """
         if posting:
-            dates = filter(lambda x: x, [p.setdefault('aux_date', None) for p in self['postings'] if p['account_name'].lower().startswith(posting.lower())])
+            dates = list(set(filter(lambda x: x, [p.setdefault('aux_date', None) for p in self['postings'] if p['account_name'].lower().startswith(posting.lower())])))
+            
+            if dates and return_string:
+                dates = [d.strftime("%Y/%m/%d") for d in dates]
             if len(dates) == 1:
                 return dates[0]
-            elif len(dates) > 1:
+            if len(dates) > 1:
                 return dates
+            if no_parent:
+                return None
+            field = "aux_date"
         try:
-            return self[field].strftime("%Y/%m/%d")
+            if return_string:
+                return self[field].strftime("%Y/%m/%d")
+            elif self[field]:
+                return self[field]
+            else:
+                return self['date']
         except AttributeError:
-            return self['date'].strftime("%Y/%m/%d")
+            if return_string:
+                return self['date'].strftime("%Y/%m/%d")
+            else:
+                return self['date']
 
     def make_match_date_amounts(self, day_range=3):
         """Make a list of dates associated with a tx. Make a list of amounts
@@ -170,21 +191,35 @@ class Transaction(dict):
                             da=[day, amt]
                             mda[str(da)] = da
         self['match_date_amounts'] = mda.values()
+
+    def format_output(self, field):
+        """Method to help us format output"""
+        if field == "date":
+            date = self.get_date()
+            if 'aux_date' in self and self['aux_date'] != None:
+                date += "="+self.get_date('aux_date')
+            return date
+        if field == "state":
+            if 'state' in self and self['state'] != "":
+                return state_flags[self['state']] +" " 
+            return ""
+        if field == "code":
+            if 'code' in self and self['code'] != "":
+                return "(" + self['code'] + ") "
+            return ""
+        if field == "note":
+            if self['note']:
+                return "\n    ;" + self['note'].replace("\n", "\n    ;")
+            return ''
     def __str__(self): return unicode(self).encode('utf-8')
     def __unicode__(tx):
-        note = ''
-        if tx['note']:
-            note = "\n    ;" + tx['note'].replace("\n", "\n    ;")
-        date = tx.get_date()
-        if 'aux_date' in tx and tx['aux_date'] != None:
-            date += "="+tx.get_date('aux_date')
-        code = ""
-        if 'code' in tx and tx['code'] != "":
-            code = "(" + tx['code'] + ") "
-        state = ''
-        if 'state' in tx and tx['state'] != "":
-            state = state_flags[tx['state']] +" " 
-        s = date + " " + state + code + tx['payee'] + note + "\n"
+        self = tx # laxy
+        #s = self.format_output("date") + " " + self.format_output("state") + self.format_output("code") + tx['payee'] + self.format_output("note") + "\n"
+        s = u"{0} {1}{2}{3}{4}\n".format(self.format_output("date"),
+                                        self.format_output("state"),
+                                        self.format_output("code"),
+                                        tx['payee'],
+                                        self.format_output("note"))
 
         # Print tags
         for tag, val in tx['tags'].items():
@@ -261,8 +296,10 @@ class Transactions(list):
         Inherit from this class and override this method."""
         raise ParseError("get_cc_by_person method should be overridden")
 
-    def sort(self):
-        list.sort(self, key=itemgetter('date', 'amount'))
+    def sort(self, key = None):
+        if not key:
+            key = itemgetter('date', 'amount')
+        list.sort(self, key=key)
 
     def make_match_date_amounts(self):
         for tx in self:
