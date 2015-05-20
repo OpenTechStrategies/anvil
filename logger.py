@@ -14,11 +14,11 @@ to a dev.
 """
 import inspect
 import logging
+import dateutil.parser
+import subprocess
 
 class LogFormatter(logging.Formatter):
     def format(self, record):
-        import dateutil
-        import subprocess
         now = dateutil.parser.parse(subprocess.check_output("date", shell=True))
         if record.levelno <= 10:
             # debug
